@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { PLANTILLA_EJEMPLO } from '@/config/plantilla';
 import { SECCIONES, type Seccion } from '@/domain/types';
 import { mensajeDeError } from '@/lib/rpc';
@@ -9,10 +9,11 @@ import { useSalon } from '@/state/SalonProvider';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
 import { Modal } from '@/components/ui/Modal';
+import { BotonConfirmar } from '../BotonConfirmar';
+import { CLASE_INPUT, CLASE_TITULO } from '../estilos';
 import { leerMapa } from '../MapaSupervisor';
 import { MarcoPaso } from '../MarcoPaso';
 import { useSupervisor } from '../SupervisorShell';
-import { useArmado } from '../useArmado';
 import { usePreparacion } from '../usePreparacion';
 import { useRpcSupervisor } from '../useRpcSupervisor';
 import { ResumenSectores } from './ResumenSectores';
@@ -20,9 +21,6 @@ import { ResumenSectores } from './ResumenSectores';
 type FilaSector = { uid: number; seccion: Seccion; nombre: string; desde: string; hasta: string };
 type Confirmacion = { tipo: 'vaciar'; paso: 1 | 2 } | { tipo: 'plantilla' } | null;
 
-const CLASE_INPUT =
-  'min-h-11 w-full rounded-xl border border-borde bg-superficie-alta px-3 text-base text-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento';
-const CLASE_TITULO = 'text-sm font-semibold uppercase tracking-wider text-texto-suave';
 const TITULOS: Record<Seccion, string> = { izquierda: 'Izquierda', centro: 'Centro', derecha: 'Derecha' };
 const PARTES = ['adelante', 'medio', 'atrás'];
 
@@ -325,41 +323,4 @@ function textosDe(c: Confirmacion): { titulo: string; cuerpo: string; botonConfi
     botonConfirmar: 'Sí, aplicar',
     peligro: true,
   };
-}
-
-/**
- * Botón de confirmación del diálogo. Los destructivos arrancan deshabilitados y se arman tras ARMADO_MS
- * (el diálogo se monta de nuevo en cada paso, así que cada paso vuelve a armarse). Mientras tanto un
- * texto visible, enlazado con aria-describedby, explica por qué no responde.
- */
-function BotonConfirmar({
-  peligro,
-  ocupado,
-  onConfirmar,
-  children,
-}: {
-  peligro: boolean;
-  ocupado: boolean;
-  onConfirmar(): void;
-  children: ReactNode;
-}) {
-  const armado = useArmado();
-  const esperando = peligro && !armado;
-  const idAyuda = useId();
-  return (
-    <>
-      <Boton
-        variante={peligro ? 'peligro' : 'primario'}
-        onClick={onConfirmar}
-        disabled={ocupado || esperando}
-        aria-describedby={esperando ? idAyuda : undefined}
-        className="w-full"
-      >
-        {ocupado ? 'Trabajando…' : children}
-      </Boton>
-      <p id={idAyuda} className="min-h-5 text-center text-sm text-texto-suave">
-        {esperando ? 'Esperá un instante…' : ''}
-      </p>
-    </>
-  );
 }

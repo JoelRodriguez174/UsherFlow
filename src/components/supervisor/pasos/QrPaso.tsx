@@ -1,15 +1,15 @@
 'use client';
 
-import { useId, useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import type { Rol } from '@/domain/types';
 import { armarEnlace, guardarAcceso } from '@/lib/acceso';
 import { mensajeDeError } from '@/lib/rpc';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
 import { Modal } from '@/components/ui/Modal';
+import { BotonConfirmar } from '../BotonConfirmar';
 import { MarcoPaso } from '../MarcoPaso';
 import { TarjetaEnlace } from '../TarjetaEnlace';
-import { useArmado } from '../useArmado';
 import { usePreparacion } from '../usePreparacion';
 import { useRpcSupervisor, type Mensaje } from '../useRpcSupervisor';
 import { useSupervisor } from '../SupervisorShell';
@@ -155,31 +155,5 @@ export function QrPaso() {
         </div>
       </Modal>
     </MarcoPaso>
-  );
-}
-
-/**
- * Botón destructivo del diálogo: arranca deshabilitado y se arma tras ARMADO_MS (anti doble toque). Mientras
- * tanto un texto visible, enlazado con aria-describedby, explica por qué no responde.
- */
-function BotonConfirmar({ ocupado, onConfirmar, children }: { ocupado: boolean; onConfirmar(): void; children: ReactNode }) {
-  const armado = useArmado();
-  const esperando = !armado;
-  const idAyuda = useId();
-  return (
-    <>
-      <Boton
-        variante="peligro"
-        onClick={onConfirmar}
-        disabled={ocupado || esperando}
-        aria-describedby={esperando ? idAyuda : undefined}
-        className="w-full"
-      >
-        {ocupado ? 'Trabajando…' : children}
-      </Boton>
-      <p id={idAyuda} className="min-h-5 text-center text-sm text-texto-suave">
-        {esperando ? 'Esperá un instante…' : ''}
-      </p>
-    </>
   );
 }

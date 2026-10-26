@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
+import { deLocalAr, mostrarHora } from '@/lib/fechas';
 import type { ResultadoRpc } from '@/lib/rpc';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
 import { Modal } from '@/components/ui/Modal';
+import { CLASE_INPUT, CLASE_TITULO } from '../estilos';
 import { MarcoPaso } from '../MarcoPaso';
 import { useSupervisor } from '../SupervisorShell';
 import { usePreparacion } from '../usePreparacion';
@@ -12,15 +14,6 @@ import { useRpcSupervisor } from '../useRpcSupervisor';
 
 type Sesion = { id: string; nombre: string; inicio_at: string };
 
-const ZONA = 'America/Argentina/Buenos_Aires';
-const CLASE_INPUT =
-  'min-h-11 w-full rounded-xl border border-borde bg-superficie-alta px-3 text-base text-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento';
-const CLASE_TITULO = 'text-sm font-semibold uppercase tracking-wider text-texto-suave';
-
-// Argentina es UTC-3 todo el año (sin horario de verano): se convierte explícito, sin depender del navegador.
-const deLocalAr = (v: string) => `${v}:00-03:00`;
-const mostrarHora = (iso: string) =>
-  new Intl.DateTimeFormat('es-AR', { timeZone: ZONA, dateStyle: 'medium', timeStyle: 'short', hour12: false }).format(new Date(iso));
 
 export function SesionesPaso() {
   const { claves } = useSupervisor();

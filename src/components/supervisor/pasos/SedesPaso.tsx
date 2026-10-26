@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react';
 import { armarEnlace } from '@/lib/acceso';
+import { aLocalAr, deLocalAr } from '@/lib/fechas';
 import { mensajeDeError } from '@/lib/rpc';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
 import { Modal } from '@/components/ui/Modal';
+import { CLASE_INPUT, CLASE_TITULO } from '../estilos';
 import { leerMapa, type SedeServidor } from '../MapaSupervisor';
 import { MarcoPaso } from '../MarcoPaso';
 import { TarjetaEnlace } from '../TarjetaEnlace';
@@ -13,13 +15,6 @@ import { useRpcSupervisor } from '../useRpcSupervisor';
 import { useSupervisor } from '../SupervisorShell';
 import { usePreparacion } from '../usePreparacion';
 
-const CLASE_INPUT =
-  'min-h-11 w-full rounded-xl border border-borde bg-superficie-alta px-3 text-base text-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento';
-const CLASE_TITULO = 'text-sm font-semibold uppercase tracking-wider text-texto-suave';
-
-// Argentina es UTC-3 todo el año (sin horario de verano): se convierte explícito, sin depender del navegador.
-const deLocalAr = (v: string) => `${v}:00-03:00`;
-const aLocalAr = (iso: string) => new Date(Date.parse(iso) - 3 * 3600_000).toISOString().slice(0, 16);
 
 export function SedesPaso() {
   const { claves } = useSupervisor();

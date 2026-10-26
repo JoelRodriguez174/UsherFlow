@@ -6,6 +6,7 @@ import { ClaveInvalidaError, llamarRpc, mensajeDeError } from '@/lib/rpc';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
 import { MapaSalon, type SectorMapa } from '@/components/mapa/MapaSalon';
+import { CLASE_TITULO } from './estilos';
 
 export type SectorServidor = { id: number; seccion: Seccion; nombre: string; fila_desde: number; fila_hasta: number; capacidad: number };
 export type SedeServidor = { sede_id: string; nombre: string; clave_acceso: string | null; preferencias: number[] };
@@ -23,8 +24,6 @@ export function leerMapa(res: Record<string, unknown>): MapaServidor {
     sesiones: lista<SesionServidor>(res.sesiones),
   };
 }
-
-const CLASE_TITULO = 'text-sm font-semibold uppercase tracking-wider text-texto-suave';
 
 /** `version`: al cambiar vuelve a pedir el mapa (p. ej. tras guardar sectores). */
 export function MapaSupervisor({ clave, version = 0 }: { clave: string; version?: number }) {

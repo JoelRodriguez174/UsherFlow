@@ -6,6 +6,7 @@ import { parsearReservasCsv, planillaATexto, type FilaReserva } from '@/lib/csv'
 import { mensajeDeError, type ResultadoRpc } from '@/lib/rpc';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
+import { CLASE_INPUT, CLASE_TITULO } from '../estilos';
 import { MapaSupervisor } from '../MapaSupervisor';
 import { MarcoPaso } from '../MarcoPaso';
 import { useSupervisor } from '../SupervisorShell';
@@ -18,9 +19,6 @@ type Sesion = { id: string; nombre: string; reservas: ReservaServidor[] };
 /** Resultado de simular una importación: o bien errores por fila del servidor, o bien el resumen. */
 type Vista = { filas: FilaReserva[]; sedesNuevas: string[]; reservas: number; errores: string[] };
 
-const CLASE_INPUT =
-  'min-h-11 w-full rounded-xl border border-borde bg-superficie-alta px-3 text-base text-texto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento';
-const CLASE_TITULO = 'text-sm font-semibold uppercase tracking-wider text-texto-suave';
 
 /** Errores por fila del servidor -> texto. `fila` 0 es un error global (sin fila). `linea` traduce a línea de archivo. */
 function textosErrores(res: unknown, linea?: (fila: number) => string): string[] | null {
