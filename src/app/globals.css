@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/*
+  Sistema de diseño "cálido": marrón-tierra oscuro, serifa en títulos, acento
+  ámbar/arena. ÚNICO lugar del proyecto donde se permiten colores hex.
+  Los componentes usan las utilidades generadas (bg-fondo, text-texto-suave,
+  border-borde, bg-libre, ...), nunca colores literales.
+*/
+@theme {
+  /* Superficies y texto */
+  --color-fondo: #14100d;
+  --color-superficie: #1d1612;
+  --color-superficie-alta: #2a1f17;
+  --color-borde: #4a3b30;
+  --color-texto: #f5ebe0;
+  --color-texto-suave: #c9b29a;
+
+  /* Acción principal */
+  --color-acento: #d4a373;
+
+  /* Estados de asiento / fila */
+  --color-libre: #a7c957;
+  --color-ocupado: #5b4a3e;
+  --color-en-camino: #c9824d;
+  --color-reservado-fijo: #9b7bc4;
+  --color-reservado-alt: #d98fb0;
+
+  /* Avisos */
+  --color-advertencia: #e0b341;
+  --color-peligro: #e0594a;
+
+  /* Tipografías (las variables --fuente-* las inyecta next/font en <html>) */
+  --font-titulo: var(--fuente-titulo), Georgia, "Times New Roman", serif;
+  --font-cuerpo: var(--fuente-cuerpo), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+html,
+body {
+  background-color: var(--color-fondo);
+  color: var(--color-texto);
+  font-family: var(--font-cuerpo);
+  font-size: 1rem;
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-titulo);
+}
+
+::selection {
+  background-color: var(--color-acento);
+  color: var(--color-fondo);
+}
+
+/* Foco visible global: nunca se quita sin reemplazo */
+:focus-visible {
+  outline: 3px solid var(--color-acento);
+  outline-offset: 2px;
+}
+
+/* Botones: respuesta táctil sin retardo y sin selección accidental del texto */
+button,
+[role="button"] {
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Scrollbars minimalistas */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-borde);
+  border-radius: 9999px;
+}
+
+/* Soporte para notch y barras de navegación dinámicas */
+.safe-top {
+  padding-top: max(0.75rem, env(safe-area-inset-top));
+}
+
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
