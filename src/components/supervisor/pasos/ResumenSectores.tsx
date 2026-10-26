@@ -12,7 +12,7 @@ export function ResumenSectores({ sectores, filas }: { sectores: ReadonlyArray<S
       {SECCIONES.map((seccion) => {
         const delaSeccion = sectores.filter((s) => s.seccion === seccion);
         const filasSeccion = filas.filter((f) => f.seccion === seccion);
-        const sinSector = filasSeccion.filter((f) => !delaSeccion.some((s) => f.numero >= s.desde && f.numero <= s.hasta)).map((f) => f.numero).sort((a, b) => a - b);
+        const sinSector = filasSeccion.filter((f) => capacidadPublicaFila(f) > 0 && !delaSeccion.some((s) => f.numero >= s.desde && f.numero <= s.hasta)).map((f) => f.numero).sort((a, b) => a - b);
         if (delaSeccion.length === 0 && sinSector.length === 0) return null;
         return (
           <section key={seccion} aria-label={TITULOS[seccion]} className="flex flex-col gap-1">

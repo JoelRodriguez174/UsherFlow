@@ -18,7 +18,6 @@ import { useRpcSupervisor } from '../useRpcSupervisor';
 import { ResumenSectores } from './ResumenSectores';
 
 type FilaSector = { uid: number; seccion: Seccion; nombre: string; desde: string; hasta: string };
-type SectorGuardado = { seccion: Seccion; nombre: string; desde: number; hasta: number };
 type Confirmacion = { tipo: 'vaciar'; paso: 1 | 2 } | { tipo: 'plantilla' } | null;
 
 const CLASE_INPUT =
@@ -46,7 +45,6 @@ export function SalonPaso() {
   const { filas: filasSalon } = useSalon();
   const { llamar, llamarOk, mensaje, setMensaje } = useRpcSupervisor(claves.claveSupervisor);
   const [filas, setFilas] = useState<FilaSector[]>([]);
-  const [guardados, setGuardados] = useState<SectorGuardado[]>([]);
   const [rangosServidor, setRangosServidor] = useState<Partial<Record<Seccion, [number, number]>>>({});
   const [hayPreferencias, setHayPreferencias] = useState(false);
   const [cargado, setCargado] = useState(false);
@@ -73,7 +71,6 @@ export function SalonPaso() {
       setRangosServidor(rangos);
       setHayPreferencias(mapa.sedes.some((s) => s.preferencias.length > 0));
       setFilas(mapa.sectores.map((s) => nueva(s.seccion, s.nombre, String(s.fila_desde), String(s.fila_hasta))));
-      setGuardados(mapa.sectores.map((s) => ({ seccion: s.seccion, nombre: s.nombre, desde: s.fila_desde, hasta: s.fila_hasta })));
       setCargado(true);
     });
     return () => {
@@ -82,6 +79,13 @@ export function SalonPaso() {
   }, [llamar, nueva, setMensaje]);
 
   const filasDelSalon = Object.values(filasSalon);
+
+  // Vista previa del formulario tal como está (sin guardar); se ignoran las filas incompletas.
+  const vistaPrevia = filas.flatMap((f) => {
+    const [desde, hasta] = [f.desde.trim(), f.hasta.trim()];
+    if (!/^\d+$/.test(desde) || !/^\d+$/.test(hasta) || Number(desde) > Number(hasta)) return [];
+    return [{ seccion: f.seccion, nombre: f.nombre.trim() || 'Sin nombre', desde: Number(desde), hasta: Number(hasta) }];
+  });
 
   /** Primer y último número de fila de la sección: del salón si hay filas, si no de los sectores ya guardados. */
   function rango(seccion: Seccion): [number, number] | null {
@@ -124,7 +128,6 @@ export function SalonPaso() {
       const res = await llamar('guardar_sectores', { p_sectores });
       if (!res) return;
       if (res.success) {
-        setGuardados(p_sectores.map((s) => ({ seccion: s.seccion, nombre: s.nombre, desde: s.fila_desde, hasta: s.fila_hasta })));
         recargar();
         return setMensaje({ tipo: 'info', texto: 'Sectores guardados.' });
       }
@@ -145,6 +148,8 @@ export function SalonPaso() {
     const { tipo } = confirmacion;
     setOcupado(true);
     setMensaje(null);
+    setErroresSectores([]);
+    setConAsignaciones(false);
     try {
       const res =
         tipo === 'vaciar' ? await llamarOk('reiniciar_salon') : await llamarOk('aplicar_plantilla', { p_plantilla: PLANTILLA_EJEMPLO });
@@ -255,9 +260,9 @@ export function SalonPaso() {
 
       <section aria-labelledby={`${idBase}-resumen`} className="flex flex-col gap-3">
         <h2 id={`${idBase}-resumen`} className={CLASE_TITULO}>
-          Sectores guardados
+          Vista previa de sectores
         </h2>
-        <ResumenSectores sectores={guardados} filas={filasDelSalon} />
+        <ResumenSectores sectores={vistaPrevia} filas={filasDelSalon} />
       </section>
 
       <section aria-labelledby={`${idBase}-acciones`} className="flex flex-col gap-3">

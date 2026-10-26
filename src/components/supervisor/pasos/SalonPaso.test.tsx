@@ -119,14 +119,56 @@ describe('SalonPaso: sectores', () => {
     expect(recargar).toHaveBeenCalledTimes(1);
   });
 
-  it('el resumen muestra los sectores guardados con sus lugares y se actualiza al guardar', async () => {
-    const user = userEvent.setup();
-    filasSalon = filasDe('centro', 20);
-    render(<SalonPaso />);
-    expect(await screen.findByText('único: filas 1 a 20 · 80 lugares')).toBeTruthy();
-    await user.click(within(grupo('Centro')).getByRole('button', { name: 'Dividir en 3 partes' }));
-    await user.click(screen.getByRole('button', { name: 'Guardar sectores' }));
-    expect(await screen.findByText('adelante: filas 1 a 6 · 24 lugares')).toBeTruthy();
+  describe('vista previa de sectores (sin guardar)', () => {
+    const estiloAdvertencia = (t: string | RegExp) => screen.getByText(t).className;
+
+    it('refleja el formulario: dividir y editar desde/hasta actualizan los lugares sin guardar', async () => {
+      const user = userEvent.setup();
+      filasSalon = filasDe('centro', 20);
+      render(<SalonPaso />);
+      expect(await screen.findByText('único: filas 1 a 20 · 80 lugares')).toBeTruthy();
+      await user.click(within(grupo('Centro')).getByRole('button', { name: 'Dividir en 3 partes' }));
+      expect(screen.getByText('adelante: filas 1 a 6 · 24 lugares')).toBeTruthy();
+      expect(screen.getByText('medio: filas 7 a 13 · 28 lugares')).toBeTruthy();
+      const hasta = within(grupo('Centro')).getAllByLabelText(/^Fila hasta/)[0];
+      await user.clear(hasta);
+      await user.type(hasta, '5');
+      expect(screen.getByText('adelante: filas 1 a 5 · 20 lugares')).toBeTruthy();
+      expect(llamadas('guardar_sectores')).toHaveLength(0);
+    });
+
+    it('al achicar un rango marca en advertencia las filas que quedan sin sector', async () => {
+      const user = userEvent.setup();
+      filasSalon = filasDe('centro', 20);
+      render(<SalonPaso />);
+      await screen.findByText('único: filas 1 a 20 · 80 lugares');
+      expect(screen.queryByText(/sin sector/i)).toBeNull();
+      const hasta = within(grupo('Centro')).getByLabelText(/^Fila hasta/);
+      await user.clear(hasta);
+      await user.type(hasta, '18');
+      expect(screen.getByText('único: filas 1 a 18 · 72 lugares')).toBeTruthy();
+      expect(screen.getByText('Filas sin sector: 19, 20')).toBeTruthy();
+      expect(estiloAdvertencia('Filas sin sector: 19, 20')).toContain('text-advertencia');
+    });
+
+    it('ignora sin romper las filas con desde/hasta vacíos o desde > hasta', async () => {
+      const user = userEvent.setup();
+      filasSalon = filasDe('centro', 4);
+      render(<SalonPaso />);
+      await screen.findByDisplayValue('único');
+      const hasta = within(grupo('Centro')).getByLabelText(/^Fila hasta/);
+      await user.clear(hasta);
+      await user.type(hasta, '4');
+      expect(screen.getByText('único: filas 1 a 4 · 16 lugares')).toBeTruthy();
+      await user.clear(hasta);
+      expect(screen.queryByText(/^único:/)).toBeNull();
+      expect(screen.getByText('Filas sin sector: 1, 2, 3, 4')).toBeTruthy();
+      await user.type(hasta, '0');
+      expect(screen.queryByText(/^único:/)).toBeNull();
+      const desde = within(grupo('Centro')).getByLabelText(/^Fila desde/);
+      await user.clear(desde);
+      expect(screen.queryByText(/^único:/)).toBeNull();
+    });
   });
 
   it('muestra los errores SECTORES_INVALIDOS uno por uno y no recarga', async () => {
@@ -158,6 +200,21 @@ describe('SalonPaso: sectores', () => {
     expect(screen.getByRole('link', { name: 'Ir a Reservas' }).getAttribute('href')).toBe('/supervisor/reservas');
     expect((screen.getByLabelText(/^Nombre/) as HTMLInputElement).value).toBe('otro');
     expect(recargar).not.toHaveBeenCalled();
+  });
+
+  it('vaciar con éxito limpia el aviso viejo de SECTORES_CON_ASIGNACIONES y su enlace a Reservas', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockImplementation(async (nombre: string) =>
+      nombre === 'guardar_sectores' ? { success: false, error: 'SECTORES_CON_ASIGNACIONES' } : nombre === 'obtener_mapa_supervisor' ? MAPA : { success: true },
+    );
+    render(<SalonPaso />);
+    await screen.findByDisplayValue('único');
+    await user.click(screen.getByRole('button', { name: 'Guardar sectores' }));
+    expect(await screen.findByRole('link', { name: 'Ir a Reservas' })).toBeTruthy();
+    await confirmarVaciado(user);
+    await waitFor(() => expect(llamadas('reiniciar_salon')).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'Ir a Reservas' })).toBeNull());
+    expect(screen.queryByText('msg:SECTORES_CON_ASIGNACIONES')).toBeNull();
   });
 
   describe('aviso de preferencias', () => {

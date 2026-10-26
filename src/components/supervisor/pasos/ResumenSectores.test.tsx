@@ -42,4 +42,10 @@ describe('ResumenSectores', () => {
     rerender(<ResumenSectores sectores={sectores} filas={filas} />);
     expect(screen.getByText('Filas sin sector: 1').className).toContain('text-advertencia');
   });
+
+  it('no marca las filas solo reservadas (sin capacidad pública)', () => {
+    const filas = [fila('centro', 1, 5), { ...fila('centro', 2, 5), tramos: [{ id: 9, orden: 1, tipo: 'reservado' as const, capacidad: 6, ocupados: 0, etiqueta: 'Pastores' }] }];
+    render(<ResumenSectores sectores={[{ seccion: 'centro', nombre: 'Único', desde: 1, hasta: 1 }]} filas={filas} />);
+    expect(screen.queryByText(/sin sector/i)).toBeNull();
+  });
 });
