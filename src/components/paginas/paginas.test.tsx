@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 
@@ -30,11 +30,9 @@ vi.mock('next/navigation', () => ({
   },
 }));
 
-import { ClaveInvalidaError } from '@/lib/rpc';
 import { olvidarAjustesEnMemoria } from '@/lib/ajustes';
 import { PuertaPagina } from './PuertaPagina';
 import { SeccionPagina } from './SeccionPagina';
-import { SupervisorPagina } from './SupervisorPagina';
 import { SedePagina } from './SedePagina';
 import SeccionRoute from '@/app/seccion/[seccion]/page';
 
@@ -204,115 +202,5 @@ describe('ruta /seccion/[seccion]', () => {
   it.each(['izquierda', 'centro', 'derecha'])('acepta %s', async (seccion) => {
     const elemento = await SeccionRoute({ params: Promise.resolve({ seccion }) });
     expect(elemento.props.seccion).toBe(seccion);
-  });
-});
-
-describe('SupervisorPagina', () => {
-  it('pide las claves con obtener_claves y muestra el panel con ambas', async () => {
-    llamarRpc.mockResolvedValue({ success: true, clave_ujier: 'UJIER9', clave_supervisor: 'SUPER9' });
-    render(<SupervisorPagina />);
-    expect(screen.getByText(/Preparando los QR/)).toBeTruthy();
-    expect(await screen.findByRole('heading', { name: 'Supervisor', level: 1 })).toBeTruthy();
-    expect(llamarRpc).toHaveBeenCalledWith('obtener_claves', { p_clave: 'SUPER1' });
-    expect(screen.getByText(`${window.location.origin}/entrar?k=UJIER9&rol=puerta`)).toBeTruthy();
-    expect(screen.getByText(/5 de 50/)).toBeTruthy();
-  });
-
-  it('guardar sectores recarga ReservasPanel (aparece la columna Sector) y MapaSupervisor', async () => {
-    const user = userEvent.setup();
-    let definidos = false;
-    const sectores = [{ id: 1, seccion: 'centro', nombre: 'adelante', fila_desde: 1, fila_hasta: 5, capacidad: 60 }];
-    llamarRpc.mockImplementation(async (nombre: string) => {
-      if (nombre === 'obtener_claves') return { success: true, clave_ujier: 'U', clave_supervisor: 'S' };
-      if (nombre === 'obtener_reservas') {
-        return {
-          success: true,
-          liberacion_min: 20,
-          sectores: definidos ? sectores : [],
-          sesiones: [{ id: 's1', nombre: 'Domingo 10', inicio_at: '2026-10-25T13:00:00Z', reservas: [{ sede: 'Moreno', seccion: 'centro', cantidad: 5 }] }],
-        };
-      }
-      if (nombre === 'obtener_mapa_supervisor') return { success: true, fecha_limite: null, sectores: definidos ? sectores : [], sedes: [], sesiones: [] };
-      if (nombre === 'guardar_sectores') {
-        definidos = true;
-        return { success: true, sectores: 1 };
-      }
-      return { success: true };
-    });
-    const veces = (n: string) => llamarRpc.mock.calls.filter((c) => c[0] === n).length;
-    render(<SupervisorPagina />);
-    await screen.findByRole('table', { name: 'Reservas de Domingo 10' });
-    expect(screen.queryByLabelText('Sector, fila 1')).toBeNull();
-    expect(await screen.findByText(/Todavía no definiste sectores/)).toBeTruthy();
-    const antes = { reservas: veces('obtener_reservas'), mapa: veces('obtener_mapa_supervisor') };
-    await user.click(screen.getByRole('button', { name: 'Guardar sectores' }));
-    expect(await screen.findByLabelText('Sector, fila 1')).toBeTruthy();
-    expect(veces('obtener_reservas')).toBe(antes.reservas + 1);
-    expect(veces('obtener_mapa_supervisor')).toBe(antes.mapa + 1);
-    expect(await screen.findByText('Sin pedidos · Asignado: 0/60')).toBeTruthy();
-  });
-
-  it('guardar reservas recarga SectoresPanel y MapaSupervisor: la sede nueva aparece sin recargar la página', async () => {
-    const user = userEvent.setup();
-    let importado = false;
-    llamarRpc.mockImplementation(async (nombre: string) => {
-      if (nombre === 'obtener_claves') return { success: true, clave_ujier: 'U', clave_supervisor: 'S' };
-      if (nombre === 'obtener_reservas') {
-        return {
-          success: true,
-          liberacion_min: 20,
-          sectores: [],
-          sesiones: [{ id: 's1', nombre: 'Domingo 10', inicio_at: '2026-10-25T13:00:00Z', reservas: [{ sede: 'Moreno', seccion: 'centro', cantidad: 5 }] }],
-        };
-      }
-      if (nombre === 'obtener_mapa_supervisor') {
-        const sedes = importado ? [{ sede_id: 'sede-n', nombre: 'Sede Nueva', clave_acceso: null, preferencias: [] }] : [];
-        return { success: true, fecha_limite: null, sectores: [], sedes, sesiones: [] };
-      }
-      if (nombre === 'importar_reservas') {
-        importado = true;
-        return { success: true };
-      }
-      return { success: true };
-    });
-    const veces = (n: string) => llamarRpc.mock.calls.filter((c) => c[0] === n).length;
-    render(<SupervisorPagina />);
-    await screen.findByRole('table', { name: 'Reservas de Domingo 10' });
-    await screen.findByText(/Todavía no hay sedes/);
-    const antes = veces('obtener_mapa_supervisor');
-    await user.click(screen.getByRole('button', { name: 'Guardar reservas' }));
-    expect(await screen.findByRole('button', { name: 'Generar enlace de Sede Nueva' })).toBeTruthy();
-    expect(veces('obtener_mapa_supervisor')).toBe(antes + 2);
-  });
-
-  it('si falla muestra el error y permite reintentar', async () => {
-    const user = userEvent.setup();
-    llamarRpc.mockRejectedValueOnce(new Error('boom'));
-    llamarRpc.mockResolvedValueOnce({ success: true, clave_ujier: 'U2', clave_supervisor: 'S2' });
-    render(<SupervisorPagina />);
-    expect((await screen.findByRole('alert')).textContent).toContain('msg:ERROR_DE_RED');
-    await user.click(screen.getByRole('button', { name: 'Probar de nuevo' }));
-    await waitFor(() => expect(screen.getByRole('heading', { name: 'Supervisor', level: 1 })).toBeTruthy());
-    expect(llamarRpc.mock.calls.filter((c) => c[0] === 'obtener_claves')).toHaveLength(2);
-  });
-
-  it('un error del servidor se muestra traducido', async () => {
-    llamarRpc.mockResolvedValue({ success: false, error: 'CLAVE_INVALIDA' });
-    render(<SupervisorPagina />);
-    expect((await screen.findByRole('alert')).textContent).toContain('msg:CLAVE_INVALIDA');
-  });
-
-  it('con la clave vencida pide un QR nuevo', async () => {
-    llamarRpc.mockRejectedValue(new ClaveInvalidaError());
-    render(<SupervisorPagina />);
-    expect(await screen.findByRole('heading', { name: 'Pedí un QR nuevo' })).toBeTruthy();
-  });
-
-  it('sin acceso guardado no llama a la red', () => {
-    leerAcceso.mockReturnValue(null);
-    contexto = armarContexto({ claveInvalida: true });
-    render(<SupervisorPagina />);
-    expect(llamarRpc).not.toHaveBeenCalled();
-    expect(screen.getByRole('heading', { name: 'Pedí un QR nuevo' })).toBeTruthy();
   });
 });

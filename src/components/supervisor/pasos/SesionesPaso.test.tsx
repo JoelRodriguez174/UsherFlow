@@ -50,7 +50,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('SesionesPaso', () => {
-  // Copiados (adaptados) de ReservasPanel.test.tsx
+  // Migrados de la antigua pantalla única
   it('muestra la sesión en hora de Argentina y la liberación', async () => {
     render(<SesionesPaso />);
     expect(await screen.findByText(/Domingo 10 · .*10:00/)).toBeTruthy();

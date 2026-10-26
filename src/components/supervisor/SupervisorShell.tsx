@@ -6,9 +6,9 @@ import { ClaveInvalidaError, llamarRpc, mensajeDeError } from '@/lib/rpc';
 import { SalonProvider } from '@/state/SalonProvider';
 import { MarcoSalon } from '@/components/paginas/MarcoSalon';
 import { PantallaClaveInvalida } from '@/components/paginas/PantallaClaveInvalida';
-import type { ClavesSalon } from './SupervisorPanel';
 import { ProveedorPreparacion } from './usePreparacion';
 
+export type ClavesSalon = { claveUjier: string; claveSupervisor: string };
 type Carga = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'claveInvalida' };
 type ValorSupervisor = { claves: ClavesSalon; origen: string; renovar(nuevas: ClavesSalon): void };
 
