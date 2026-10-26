@@ -2,9 +2,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { PASOS } from '@/domain/preparacion';
 
 const llamarRpc = vi.fn();
+const recargar = vi.fn();
+const usePreparacion = vi.fn();
 
+vi.mock('@/components/supervisor/usePreparacion', () => ({ usePreparacion: () => usePreparacion() }));
+vi.mock('@/components/supervisor/SupervisorShell', () => ({
+  useSupervisor: () => ({ claves: { claveUjier: 'UJIER1', claveSupervisor: 'SUPER1' }, origen: 'https://usherflow.test', renovar: vi.fn() }),
+}));
+vi.mock('@/components/supervisor/MapaSupervisor', () => ({
+  MapaSupervisor: ({ clave, version }: { clave: string; version: number }) => <div data-testid="mapa">{`${clave}:${version}`}</div>,
+}));
 vi.mock('@/lib/rpc', () => ({
   llamarRpc: (...a: unknown[]) => llamarRpc(...a),
   ClaveInvalidaError: class ClaveInvalidaError extends Error {},
@@ -14,7 +24,7 @@ vi.mock('@/lib/rpc', () => ({
 const readSheet = vi.fn();
 vi.mock('read-excel-file/universal', () => ({ readSheet: (...a: unknown[]) => readSheet(...a) }));
 
-import { ReservasPanel } from './ReservasPanel';
+import { ReservasPaso } from './ReservasPaso';
 
 const OBTENER = {
   success: true,
@@ -35,6 +45,8 @@ function llamadas(nombre: string) {
 
 beforeEach(() => {
   llamarRpc.mockReset();
+  recargar.mockReset();
+  usePreparacion.mockReturnValue({ estado: 'listo', pasos: PASOS.map((p) => ({ ...p, completo: true, bloqueado: false, resumen: '', requisitos: [], avisos: [] })), recargar });
   llamarRpc.mockImplementation(async (nombre: string) => {
     if (nombre === 'obtener_reservas') return OBTENER;
     if (nombre === 'importar_reservas') return { success: true, sedes_nuevas: ['Catán'], reservas: 1 };
@@ -48,16 +60,10 @@ async function subirCsv(user: ReturnType<typeof userEvent.setup>, texto: string)
   await user.upload(input, new File([texto], 'reservas.csv', { type: 'text/csv' }));
 }
 
-describe('ReservasPanel', () => {
-  it('muestra la sesión en hora de Argentina y la liberación', async () => {
-    render(<ReservasPanel clave="SUPER1" />);
-    expect(await screen.findByText(/Domingo 10 · .*10:00/)).toBeTruthy();
-    expect((screen.getByLabelText('Minutos de liberación') as HTMLInputElement).value).toBe('20');
-  });
-
+describe('ReservasPaso', () => {
   it('un CSV con línea inválida la muestra y no llama al servidor', async () => {
     const user = userEvent.setup();
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nMoreno,centro,Domingo 10,3\nMoreno,arriba,Domingo 10,3\n');
     expect(await screen.findByText('Línea 3: Sección inválida: arriba')).toBeTruthy();
     expect(llamadas('importar_reservas')).toHaveLength(0);
@@ -65,10 +71,10 @@ describe('ReservasPanel', () => {
 
   it('un CSV en windows-1252 (Excel en español) conserva los acentos', async () => {
     const user = userEvent.setup();
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     const bytes = new Uint8Array([...new TextEncoder().encode('sede,seccion,sesion,cantidad\n'), 0x43, 0x61, 0x74, 0xe1, 0x6e, ...new TextEncoder().encode(',centro,Domingo 10,3\n')]);
     await user.upload(await screen.findByLabelText('Archivo Excel o CSV'), new File([bytes], 'reservas.csv', { type: 'text/csv' }));
-    expect(await screen.findByText('Sedes nuevas: Catán')).toBeTruthy();
+    expect(await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.')).toBeTruthy();
     expect(llamadas('importar_reservas')[0][1]).toMatchObject({ p_filas: [{ sede: 'Catán' }] });
   });
 
@@ -78,17 +84,17 @@ describe('ReservasPanel', () => {
       ['sede', 'seccion', 'sesion', 'cantidad'],
       ['Catán', 'centro', 'Domingo 10', 42],
     ]);
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     await user.upload(await screen.findByLabelText('Archivo Excel o CSV'), new File(['x'], 'reservas.xlsx', { type: xlsx }));
-    expect(await screen.findByText('Sedes nuevas: Catán')).toBeTruthy();
+    expect(await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.')).toBeTruthy();
     expect(llamadas('importar_reservas')[0][1]).toMatchObject({ p_filas: [{ sede: 'Catán', seccion: 'centro', sesion: 'Domingo 10', cantidad: 42 }] });
   });
 
   it('un Excel ilegible muestra el error y no llama al servidor', async () => {
     const user = userEvent.setup();
     readSheet.mockRejectedValue(new Error('zip roto'));
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     await user.upload(await screen.findByLabelText('Archivo Excel o CSV'), new File(['x'], 'reservas.xlsx', { type: xlsx }));
     expect(await screen.findByText(/No se pudo leer el Excel/)).toBeTruthy();
@@ -97,9 +103,9 @@ describe('ReservasPanel', () => {
 
   it('un CSV válido se simula, muestra sedes nuevas y al confirmar importa', async () => {
     const user = userEvent.setup();
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatán,centro,Domingo 10,3\n');
-    expect(await screen.findByText('Sedes nuevas: Catán')).toBeTruthy();
+    expect(await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.')).toBeTruthy();
     expect(llamadas('importar_reservas')[0][1]).toMatchObject({ p_clave: 'SUPER1', p_simular: true });
     await user.click(screen.getByRole('button', { name: 'Confirmar importación' }));
     await waitFor(() => expect(llamadas('importar_reservas')).toHaveLength(2));
@@ -109,9 +115,9 @@ describe('ReservasPanel', () => {
 
   it('guardar la tabla manual manda las filas de esa sesión', async () => {
     const user = userEvent.setup();
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     const tabla = await screen.findByRole('table', { name: 'Reservas de Domingo 10' });
-    await user.click(within(tabla.parentElement as HTMLElement).getByRole('button', { name: 'Guardar reservas' }));
+    await user.click(within(tabla.parentElement!.parentElement as HTMLElement).getByRole('button', { name: 'Guardar reservas' }));
     await waitFor(() => expect(llamadas('importar_reservas')).toHaveLength(1));
     expect(llamadas('importar_reservas')[0][1]).toEqual({
       p_clave: 'SUPER1',
@@ -119,48 +125,6 @@ describe('ReservasPanel', () => {
       p_simular: false,
       p_sesiones: ['Domingo 10'],
     });
-  });
-
-  it('onCambio se llama tras importar (no tras simular) y tras borrar una sesión; no si el servidor rechaza', async () => {
-    const user = userEvent.setup();
-    const onCambio = vi.fn();
-    render(<ReservasPanel clave="SUPER1" onCambio={onCambio} />);
-    await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatán,centro,Domingo 10,3\n');
-    await screen.findByText('Sedes nuevas: Catán');
-    expect(onCambio).not.toHaveBeenCalled();
-    await user.click(screen.getByRole('button', { name: 'Confirmar importación' }));
-    await waitFor(() => expect(onCambio).toHaveBeenCalledTimes(1));
-    await user.click(screen.getByRole('button', { name: 'Borrar Domingo 10' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sí, borrar' }));
-    await waitFor(() => expect(onCambio).toHaveBeenCalledTimes(2));
-    llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_reservas' ? OBTENER : { success: false, error: 'X' }));
-    await user.click(screen.getByRole('button', { name: 'Guardar reservas' }));
-    await screen.findByText('msg:X');
-    expect(onCambio).toHaveBeenCalledTimes(2);
-  });
-
-  it('guarda una sesión nueva con la hora de Argentina (-03:00)', async () => {
-    const user = userEvent.setup();
-    render(<ReservasPanel clave="SUPER1" />);
-    await user.type(await screen.findByLabelText('Nombre de la sesión'), 'Domingo 18');
-    await user.type(screen.getByLabelText('Inicio'), '2026-10-25T18:30');
-    await user.click(screen.getByRole('button', { name: 'Guardar sesión' }));
-    await waitFor(() => expect(llamadas('guardar_sesion')).toHaveLength(1));
-    expect(llamadas('guardar_sesion')[0][1]).toEqual({
-      p_clave: 'SUPER1',
-      p_nombre: 'Domingo 18',
-      p_inicio_at: '2026-10-25T18:30:00-03:00',
-    });
-  });
-
-  it('borrar una sesión pide confirmación', async () => {
-    const user = userEvent.setup();
-    render(<ReservasPanel clave="SUPER1" />);
-    await user.click(await screen.findByRole('button', { name: 'Borrar Domingo 10' }));
-    expect(llamadas('borrar_sesion')).toHaveLength(0);
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sí, borrar' }));
-    await waitFor(() => expect(llamadas('borrar_sesion')).toHaveLength(1));
-    expect(llamadas('borrar_sesion')[0][1]).toEqual({ p_clave: 'SUPER1', p_sesion_id: 's1' });
   });
 
   it('errores del servidor en un CSV se muestran con la línea del archivo y los globales sin "Fila 0"', async () => {
@@ -177,7 +141,7 @@ describe('ReservasPanel', () => {
             ],
           },
     );
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nA,centro,Domingo 10,3\n\nB,centro,Domingo 10,3\n');
     expect(await screen.findByText('Línea 4: Excede la capacidad')).toBeTruthy();
     expect(screen.getByText('Sesión inexistente: X')).toBeTruthy();
@@ -191,7 +155,7 @@ describe('ReservasPanel', () => {
         ? OBTENER
         : { success: false, error: 'RESERVAS_INVALIDAS', errores: [{ fila: 1, motivo: 'Excede la capacidad de centro' }] },
     );
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     await user.click(await screen.findByRole('button', { name: 'Guardar reservas' }));
     expect((await screen.findByRole('alert')).textContent).toContain('Fila 1: Excede la capacidad de centro');
   });
@@ -210,7 +174,7 @@ describe('ReservasPanel', () => {
     it('la tabla ofrece "Toda la sección" y solo los sectores de esa sección, y manda el sector elegido', async () => {
       const user = userEvent.setup();
       llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_reservas' ? CON_SECTORES : { success: true }));
-      render(<ReservasPanel clave="SUPER1" />);
+      render(<ReservasPaso />);
       const sector = (await screen.findByLabelText('Sector, fila 1')) as HTMLSelectElement;
       expect(sector.value).toBe('adelante');
       expect(within(sector).getAllByRole('option').map((o) => o.textContent)).toEqual(['Toda la sección', 'adelante', 'atrás']);
@@ -225,7 +189,7 @@ describe('ReservasPanel', () => {
     it('cambiar la sección de una fila limpia el sector y "Toda la sección" no manda sector', async () => {
       const user = userEvent.setup();
       llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_reservas' ? CON_SECTORES : { success: true }));
-      render(<ReservasPanel clave="SUPER1" />);
+      render(<ReservasPaso />);
       await user.selectOptions(await screen.findByLabelText('Sección, fila 1'), 'izquierda');
       expect((screen.getByLabelText('Sector, fila 1') as HTMLSelectElement).value).toBe('');
       await user.click(screen.getByRole('button', { name: 'Guardar reservas' }));
@@ -235,7 +199,7 @@ describe('ReservasPanel', () => {
 
     it('un CSV con columna sector la muestra en la vista previa y la manda al servidor', async () => {
       const user = userEvent.setup();
-      render(<ReservasPanel clave="SUPER1" />);
+      render(<ReservasPaso />);
       await subirCsv(user, 'sede,seccion,sesion,cantidad,sector\nCatán,centro,Domingo 10,3,adelante\n');
       const vista = await screen.findByRole('table', { name: 'Vista previa de la importación' });
       expect(within(vista).getByRole('columnheader', { name: 'Sector' })).toBeTruthy();
@@ -245,8 +209,64 @@ describe('ReservasPanel', () => {
   });
 
   it('sin sectores la tabla no muestra la columna Sector', async () => {
-    render(<ReservasPanel clave="SUPER1" />);
+    render(<ReservasPaso />);
     await screen.findByRole('table', { name: 'Reservas de Domingo 10' });
     expect(screen.queryByLabelText('Sector, fila 1')).toBeNull();
+  });
+
+  it('el mapa se renderiza con la clave y su version cambia tras guardar la tabla', async () => {
+    const user = userEvent.setup();
+    render(<ReservasPaso />);
+    await screen.findByRole('table', { name: 'Reservas de Domingo 10' });
+    expect(screen.getByTestId('mapa').textContent).toBe('SUPER1:0');
+    await user.click(screen.getByRole('button', { name: 'Guardar reservas' }));
+    await waitFor(() => expect(screen.getByTestId('mapa').textContent).toBe('SUPER1:1'));
+  });
+
+  it('guardar la tabla llama recargar() y no si el servidor rechaza', async () => {
+    const user = userEvent.setup();
+    render(<ReservasPaso />);
+    await user.click(await screen.findByRole('button', { name: 'Guardar reservas' }));
+    await waitFor(() => expect(recargar).toHaveBeenCalledTimes(1));
+    llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_reservas' ? OBTENER : { success: false, error: 'X' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar reservas' }));
+    await screen.findByText('msg:X');
+    expect(recargar).toHaveBeenCalledTimes(1);
+  });
+
+  it('confirmar la importación llama recargar() y simular no', async () => {
+    const user = userEvent.setup();
+    render(<ReservasPaso />);
+    await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatán,centro,Domingo 10,3\n');
+    await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.');
+    expect(recargar).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Confirmar importación' }));
+    await waitFor(() => expect(recargar).toHaveBeenCalledTimes(1));
+  });
+
+  it('con sedes nuevas la vista previa avisa con borde de advertencia y deja confirmar', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockImplementation(async (nombre: string) =>
+      nombre === 'obtener_reservas' ? OBTENER : { success: true, sedes_nuevas: ['Catan', 'Moron'], reservas: 1 },
+    );
+    render(<ReservasPaso />);
+    await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatan,centro,Domingo 10,3\n');
+    const aviso = await screen.findByText('Se van a crear sedes nuevas: Catan, Moron. Si es un error de tipeo, corregí el archivo.');
+    expect(aviso.className).toContain('border-advertencia');
+    expect(aviso.getAttribute('role')).toBe('status');
+    expect(screen.queryByText(/^Sedes nuevas:/)).toBeNull();
+    expect((screen.getByRole('button', { name: 'Confirmar importación' }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('sin sedes nuevas no hay aviso de sedes nuevas pero sí confirmar', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockImplementation(async (nombre: string) =>
+      nombre === 'obtener_reservas' ? OBTENER : { success: true, sedes_nuevas: [], reservas: 1 },
+    );
+    render(<ReservasPaso />);
+    await subirCsv(user, 'sede,seccion,sesion,cantidad\nMoreno,centro,Domingo 10,3\n');
+    await screen.findByText('Reservas a guardar: 1');
+    expect(screen.queryByText(/Se van a crear sedes nuevas/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Confirmar importación' })).toBeTruthy();
   });
 });

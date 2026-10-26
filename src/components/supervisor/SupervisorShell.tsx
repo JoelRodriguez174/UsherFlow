@@ -1,17 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { leerAcceso } from '@/lib/acceso';
 import { ClaveInvalidaError, llamarRpc, mensajeDeError } from '@/lib/rpc';
-import { SalonProvider, useSalon } from '@/state/SalonProvider';
-import { MapaSupervisor } from '@/components/supervisor/MapaSupervisor';
-import { ReservasPanel } from '@/components/supervisor/ReservasPanel';
-import { SectoresPanel } from '@/components/supervisor/SectoresPanel';
-import { SupervisorPanel, type ClavesSalon } from '@/components/supervisor/SupervisorPanel';
-import { MarcoSalon } from './MarcoSalon';
-import { PantallaClaveInvalida } from './PantallaClaveInvalida';
+import { SalonProvider } from '@/state/SalonProvider';
+import { MarcoSalon } from '@/components/paginas/MarcoSalon';
+import { PantallaClaveInvalida } from '@/components/paginas/PantallaClaveInvalida';
+import { ProveedorPreparacion } from './usePreparacion';
 
+export type ClavesSalon = { claveUjier: string; claveSupervisor: string };
 type Carga = { estado: 'cargando' } | { estado: 'error'; mensaje: string } | { estado: 'claveInvalida' };
+type ValorSupervisor = { claves: ClavesSalon; origen: string; renovar(nuevas: ClavesSalon): void };
+
+const SupervisorContext = createContext<ValorSupervisor | null>(null);
+
+export function useSupervisor(): ValorSupervisor {
+  const v = useContext(SupervisorContext);
+  if (v === null) throw new Error('useSupervisor se usa dentro de <SupervisorShell>');
+  return v;
+}
 
 /**
  * Los QR de los ujieres necesitan las dos claves y solo la clave de supervisor puede pedirlas
@@ -67,34 +74,24 @@ function useClavesDelSalon() {
   };
 }
 
-type SupervisorContenidoProps = {
+function Contenido({ claves, carga, onReintentar, onRenovadas, children }: {
   claves: ClavesSalon | null;
   carga: Carga;
   onReintentar(): void;
   onRenovadas(claves: ClavesSalon): void;
-};
+  children: ReactNode;
+}) {
+  // Solo se llega con claves ya cargadas (en el navegador): `window` existe.
+  const valor = useMemo(
+    () => (claves === null ? null : { claves, origen: window.location.origin, renovar: onRenovadas }),
+    [claves, onRenovadas],
+  );
 
-function SupervisorContenido({ claves, carga, onReintentar, onRenovadas }: SupervisorContenidoProps) {
-  const { derivado, filas } = useSalon();
-  // Cada panel recarga cuando cambia lo que el otro escribió, no lo propio (evita pedir dos veces):
-  // guardar sectores -> ReservasPanel y MapaSupervisor; reservas/sesiones (crean sedes) -> SectoresPanel y MapaSupervisor.
-  const [vSectores, setVSectores] = useState(0);
-  const [vReservas, setVReservas] = useState(0);
-
-  if (claves !== null) {
+  if (valor !== null) {
     return (
-      <main>
-        <SupervisorPanel
-          claveUjier={claves.claveUjier}
-          claveSupervisor={claves.claveSupervisor}
-          origen={window.location.origin}
-          ocupacion={derivado.ocupacion}
-          onClavesRenovadas={onRenovadas}
-        />
-        <ReservasPanel clave={claves.claveSupervisor} version={vSectores} onCambio={() => setVReservas((v) => v + 1)} />
-        <SectoresPanel clave={claves.claveSupervisor} filas={Object.values(filas)} version={vReservas} onGuardado={() => setVSectores((v) => v + 1)} />
-        <MapaSupervisor clave={claves.claveSupervisor} version={vSectores + vReservas} />
-      </main>
+      <SupervisorContext.Provider value={valor}>
+        <ProveedorPreparacion clave={valor.claves.claveSupervisor}>{children}</ProveedorPreparacion>
+      </SupervisorContext.Provider>
     );
   }
 
@@ -119,35 +116,43 @@ function SupervisorContenido({ claves, carga, onReintentar, onRenovadas }: Super
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-8">
       <p role="status" className="text-base text-texto-suave">
-        Preparando los QR…
+        Preparando…
       </p>
     </main>
   );
 }
 
 /**
- * Ver `PuertaPagina` sobre el montaje del provider. Acá, además, tras "Renovar claves" el provider se
- * vuelve a montar (`key`) para que sincronice con la clave de supervisor nueva: la vieja ya no sirve en el
- * servidor y, sin remontar, la propia pantalla del supervisor caería en "Pedí un QR nuevo".
+ * Claves, `SalonProvider` y estado de los pasos compartidos por todas las rutas de `/supervisor`
+ * (lo monta `layout.tsx`, así sobreviven a la navegación). Tras "Renovar claves" el provider se vuelve a
+ * montar (`key`) para que sincronice con la clave de supervisor nueva: la vieja ya no sirve en el servidor
+ * y, sin remontar, la propia pantalla caería en "Pedí un QR nuevo". La ruta no cambia.
  */
-export function SupervisorPagina() {
+export function SupervisorShell({ children }: { children: ReactNode }) {
   const { claves, carga, fijarClaves, reintentar } = useClavesDelSalon();
   const [generacion, setGeneracion] = useState(0);
+
+  const renovar = useCallback(
+    (nuevas: ClavesSalon) => {
+      fijarClaves(nuevas);
+      setGeneracion((g) => g + 1);
+    },
+    [fijarClaves],
+  );
 
   if (carga.estado === 'claveInvalida') return <PantallaClaveInvalida />;
 
   return (
     <SalonProvider key={generacion}>
       <MarcoSalon>
-        <SupervisorContenido
+        <Contenido
           claves={claves}
           carga={carga}
           onReintentar={reintentar}
-          onRenovadas={(nuevas) => {
-            fijarClaves(nuevas);
-            setGeneracion((g) => g + 1);
-          }}
-        />
+          onRenovadas={renovar}
+        >
+          {children}
+        </Contenido>
       </MarcoSalon>
     </SalonProvider>
   );
