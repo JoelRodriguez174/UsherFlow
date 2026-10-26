@@ -74,7 +74,7 @@ describe('ReservasPaso', () => {
     render(<ReservasPaso />);
     const bytes = new Uint8Array([...new TextEncoder().encode('sede,seccion,sesion,cantidad\n'), 0x43, 0x61, 0x74, 0xe1, 0x6e, ...new TextEncoder().encode(',centro,Domingo 10,3\n')]);
     await user.upload(await screen.findByLabelText('Archivo Excel o CSV'), new File([bytes], 'reservas.csv', { type: 'text/csv' }));
-    expect(await screen.findByText('Sedes nuevas: Catán')).toBeTruthy();
+    expect(await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.')).toBeTruthy();
     expect(llamadas('importar_reservas')[0][1]).toMatchObject({ p_filas: [{ sede: 'Catán' }] });
   });
 
@@ -87,7 +87,7 @@ describe('ReservasPaso', () => {
     render(<ReservasPaso />);
     const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     await user.upload(await screen.findByLabelText('Archivo Excel o CSV'), new File(['x'], 'reservas.xlsx', { type: xlsx }));
-    expect(await screen.findByText('Sedes nuevas: Catán')).toBeTruthy();
+    expect(await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.')).toBeTruthy();
     expect(llamadas('importar_reservas')[0][1]).toMatchObject({ p_filas: [{ sede: 'Catán', seccion: 'centro', sesion: 'Domingo 10', cantidad: 42 }] });
   });
 
@@ -105,7 +105,7 @@ describe('ReservasPaso', () => {
     const user = userEvent.setup();
     render(<ReservasPaso />);
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatán,centro,Domingo 10,3\n');
-    expect(await screen.findByText('Sedes nuevas: Catán')).toBeTruthy();
+    expect(await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.')).toBeTruthy();
     expect(llamadas('importar_reservas')[0][1]).toMatchObject({ p_clave: 'SUPER1', p_simular: true });
     await user.click(screen.getByRole('button', { name: 'Confirmar importación' }));
     await waitFor(() => expect(llamadas('importar_reservas')).toHaveLength(2));
@@ -238,7 +238,7 @@ describe('ReservasPaso', () => {
     const user = userEvent.setup();
     render(<ReservasPaso />);
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatán,centro,Domingo 10,3\n');
-    await screen.findByText('Sedes nuevas: Catán');
+    await screen.findByText('Se van a crear sedes nuevas: Catán. Si es un error de tipeo, corregí el archivo.');
     expect(recargar).not.toHaveBeenCalled();
     await user.click(screen.getByRole('button', { name: 'Confirmar importación' }));
     await waitFor(() => expect(recargar).toHaveBeenCalledTimes(1));
@@ -253,6 +253,8 @@ describe('ReservasPaso', () => {
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nCatan,centro,Domingo 10,3\n');
     const aviso = await screen.findByText('Se van a crear sedes nuevas: Catan, Moron. Si es un error de tipeo, corregí el archivo.');
     expect(aviso.className).toContain('border-advertencia');
+    expect(aviso.getAttribute('role')).toBe('status');
+    expect(screen.queryByText(/^Sedes nuevas:/)).toBeNull();
     expect((screen.getByRole('button', { name: 'Confirmar importación' }) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -263,7 +265,7 @@ describe('ReservasPaso', () => {
     );
     render(<ReservasPaso />);
     await subirCsv(user, 'sede,seccion,sesion,cantidad\nMoreno,centro,Domingo 10,3\n');
-    await screen.findByText('Sedes nuevas: ninguna');
+    await screen.findByText('Reservas a guardar: 1');
     expect(screen.queryByText(/Se van a crear sedes nuevas/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Confirmar importación' })).toBeTruthy();
   });

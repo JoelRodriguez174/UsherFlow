@@ -45,12 +45,12 @@ select public.crear_evento('Nombre del evento');
 Devuelve las dos claves del evento (`clave_ujier` y `clave_supervisor`). Después:
 
 1. Abrí `/entrar?k=<clave_supervisor>&rol=supervisor`.
-2. En el panel del supervisor usá "Aplicar plantilla" para generar las filas del salón.
-3. Compartí los códigos QR del panel con la Puerta y con cada Sección.
+2. En "Preparar el evento" (`/supervisor`) seguí los pasos en orden. En el paso Salón (`/supervisor/salon`) usá "Aplicar plantilla" para generar las filas.
+3. En el paso QR de ujieres (`/supervisor/qr`) compartí los códigos con la Puerta y con cada Sección.
 
 ## Seguridad / operación
 
-- El enlace del ujier lleva una clave secreta. Si se filtra, renovála desde el panel del supervisor con "Renovar claves".
+- El enlace del ujier lleva una clave secreta. Si se filtra, renovála desde `/supervisor/qr` con "Renovar claves".
 - Renovar las claves corta el acceso por RPC de los enlaces viejos, pero las tablas del salón siguen siendo legibles por cualquiera que tenga la anon key pública. Esto está aceptado en la Etapa 1; no se guardan datos personales.
 - Nunca habilites el registro de sentencias o parámetros en la base (`log_statement = 'all'`, pgaudit, auto_explain con parámetros): las llamadas RPC llevan la clave como parámetro y quedaría en los logs.
 - Las migraciones de `supabase/migrations/` son destructivas desde la primera (borran el esquema viejo). Aplicalas solo en un proyecto de desarrollo descartable o en uno nuevo y vacío. Subirlas a un proyecto hospedado es decisión del dueño del proyecto y no está automatizado.

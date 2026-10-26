@@ -193,9 +193,8 @@ export function ReservasPaso() {
             ) : (
               <>
                 <p>{`Reservas a guardar: ${vista.reservas}`}</p>
-                <p>{`Sedes nuevas: ${vista.sedesNuevas.length > 0 ? vista.sedesNuevas.join(', ') : 'ninguna'}`}</p>
                 {vista.sedesNuevas.length > 0 && (
-                  <p className="rounded-xl border border-advertencia p-2">{`Se van a crear sedes nuevas: ${vista.sedesNuevas.join(', ')}. Si es un error de tipeo, corregí el archivo.`}</p>
+                  <p role="status" className="rounded-xl border border-advertencia p-2">{`Se van a crear sedes nuevas: ${vista.sedesNuevas.join(', ')}. Si es un error de tipeo, corregí el archivo.`}</p>
                 )}
                 <VistaPrevia filas={vista.filas} />
                 <Boton onClick={confirmarImportacion} disabled={ocupado}>
