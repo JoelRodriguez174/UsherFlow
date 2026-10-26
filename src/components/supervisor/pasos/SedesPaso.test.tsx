@@ -119,6 +119,23 @@ describe('SedesPaso', () => {
       expect(recargar).toHaveBeenCalledTimes(1);
     });
 
+    it('refresca las sedes sin pisar la fecha límite que se está editando', async () => {
+      const user = userEvent.setup();
+      llamarRpc.mockImplementation(async (nombre: string) => {
+        if (nombre === 'obtener_mapa_supervisor') return MAPA;
+        return { success: true };
+      });
+      render(<SedesPaso />);
+      const campo = (await screen.findByLabelText('Fecha límite')) as HTMLInputElement;
+      await waitFor(() => expect(campo.value).toBe('2026-11-01T18:30'));
+      await user.clear(campo);
+      await user.type(campo, '2026-12-05T10:00');
+      await user.type(screen.getByLabelText('Agregar sede'), 'Pilar');
+      await user.click(screen.getByRole('button', { name: 'Agregar' }));
+      await waitFor(() => expect(llamadas('obtener_mapa_supervisor')).toHaveLength(2));
+      expect(campo.value).toBe('2026-12-05T10:00');
+    });
+
     it('con NOMBRE_INVALIDO muestra el mensaje, no limpia el campo y no recarga', async () => {
       const user = userEvent.setup();
       llamarRpc.mockImplementation(async (nombre: string) =>

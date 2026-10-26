@@ -149,6 +149,21 @@ describe('SupervisorShell', () => {
     await waitFor(() => expect(screen.getByTestId('claves')).toBeTruthy());
   });
 
+  it('un error del servidor en obtener_claves se muestra traducido', async () => {
+    responder({ obtener_claves: { success: false, error: 'CLAVE_INVALIDA' } });
+    montar();
+    expect((await screen.findByRole('alert')).textContent).toContain('msg:CLAVE_INVALIDA');
+    expect(screen.queryByTestId('claves')).toBeNull();
+  });
+
+  it('sin acceso guardado no llama a la red ni renderiza los hijos', () => {
+    leerAcceso.mockReturnValue(null);
+    responder();
+    montar();
+    expect(llamarRpc).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('claves')).toBeNull();
+  });
+
   it('con clave inválida muestra la pantalla de clave inválida', async () => {
     responder({ obtener_claves: new ClaveInvalidaError() });
     montar();
