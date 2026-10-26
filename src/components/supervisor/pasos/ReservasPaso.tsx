@@ -267,69 +267,71 @@ function TablaSesion({ sesion, sectores, ocupado, onGuardar }: TablaSesionProps)
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-borde p-3">
       <h3 className="text-base font-semibold text-texto">{sesion.nombre}</h3>
-      <table aria-label={`Reservas de ${sesion.nombre}`} className="w-full border-separate border-spacing-y-2">
-        <thead>
-          <tr className="text-left text-sm text-texto-suave">
-            <th scope="col" className="font-normal">
-              Sede
-            </th>
-            <th scope="col" className="font-normal">
-              Sección
-            </th>
-            {conSectores && (
+      <div className="overflow-x-auto">
+        <table aria-label={`Reservas de ${sesion.nombre}`} className="w-full border-separate border-spacing-y-2">
+          <thead>
+            <tr className="text-left text-sm text-texto-suave">
               <th scope="col" className="font-normal">
-                Sector
+                Sede
               </th>
-            )}
-            <th scope="col" className="font-normal">
-              Cantidad
-            </th>
-            <th scope="col" className="sr-only">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {filas.map((f, i) => (
-            <tr key={i}>
-              <td className="pr-1">
-                <input aria-label={`Sede, fila ${i + 1}`} type="text" value={f.sede} onChange={(e) => cambiar(i, { sede: e.target.value })} autoComplete="off" className={CLASE_INPUT} />
-              </td>
-              <td className="pr-1">
-                <select aria-label={`Sección, fila ${i + 1}`} value={f.seccion} onChange={(e) => cambiar(i, { seccion: e.target.value as Seccion, sector: '' })} className={CLASE_INPUT}>
-                  {SECCIONES.map((s) => (
-                    <option key={s} value={s}>
-                      {s[0].toUpperCase() + s.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </td>
+              <th scope="col" className="font-normal">
+                Sección
+              </th>
               {conSectores && (
+                <th scope="col" className="font-normal">
+                  Sector
+                </th>
+              )}
+              <th scope="col" className="font-normal">
+                Cantidad
+              </th>
+              <th scope="col" className="sr-only">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map((f, i) => (
+              <tr key={i}>
                 <td className="pr-1">
-                  <select aria-label={`Sector, fila ${i + 1}`} value={f.sector} onChange={(e) => cambiar(i, { sector: e.target.value })} className={CLASE_INPUT}>
-                    <option value="">Toda la sección</option>
-                    {sectores
-                      .filter((x) => x.seccion === f.seccion)
-                      .map((x) => (
-                        <option key={x.id} value={x.nombre}>
-                          {x.nombre}
-                        </option>
-                      ))}
+                  <input aria-label={`Sede, fila ${i + 1}`} type="text" value={f.sede} onChange={(e) => cambiar(i, { sede: e.target.value })} autoComplete="off" className={CLASE_INPUT} />
+                </td>
+                <td className="pr-1">
+                  <select aria-label={`Sección, fila ${i + 1}`} value={f.seccion} onChange={(e) => cambiar(i, { seccion: e.target.value as Seccion, sector: '' })} className={CLASE_INPUT}>
+                    {SECCIONES.map((s) => (
+                      <option key={s} value={s}>
+                        {s[0].toUpperCase() + s.slice(1)}
+                      </option>
+                    ))}
                   </select>
                 </td>
-              )}
-              <td className="pr-1">
-                <input aria-label={`Cantidad, fila ${i + 1}`} type="number" inputMode="numeric" min={1} step={1} value={f.cantidad} onChange={(e) => cambiar(i, { cantidad: e.target.value })} className={CLASE_INPUT} />
-              </td>
-              <td>
-                <Boton variante="fantasma" etiqueta={`Quitar fila ${i + 1}`} onClick={() => setFilas((fs) => fs.filter((_, j) => j !== i))}>
-                  Quitar
-                </Boton>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                {conSectores && (
+                  <td className="pr-1">
+                    <select aria-label={`Sector, fila ${i + 1}`} value={f.sector} onChange={(e) => cambiar(i, { sector: e.target.value })} className={CLASE_INPUT}>
+                      <option value="">Toda la sección</option>
+                      {sectores
+                        .filter((x) => x.seccion === f.seccion)
+                        .map((x) => (
+                          <option key={x.id} value={x.nombre}>
+                            {x.nombre}
+                          </option>
+                        ))}
+                    </select>
+                  </td>
+                )}
+                <td className="pr-1">
+                  <input aria-label={`Cantidad, fila ${i + 1}`} type="number" inputMode="numeric" min={1} step={1} value={f.cantidad} onChange={(e) => cambiar(i, { cantidad: e.target.value })} className={CLASE_INPUT} />
+                </td>
+                <td>
+                  <Boton variante="fantasma" etiqueta={`Quitar fila ${i + 1}`} onClick={() => setFilas((fs) => fs.filter((_, j) => j !== i))}>
+                    Quitar
+                  </Boton>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <div className="flex flex-col gap-2">
         <Boton variante="secundario" onClick={() => setFilas((fs) => [...fs, { sede: '', seccion: 'centro', cantidad: '', sector: '' }])}>
           Agregar fila

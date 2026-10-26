@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PASOS, type Paso } from '@/domain/preparacion';
 
 const usePreparacion = vi.fn();
+const useSalon = vi.fn();
+vi.mock('@/state/SalonProvider', () => ({ useSalon: () => useSalon() }));
 vi.mock('@/components/supervisor/usePreparacion', () => ({ usePreparacion: () => usePreparacion() }));
 
 import { PasosInicio } from './PasosInicio';
@@ -33,15 +35,37 @@ const pasos: Paso[] = [
 
 const listo = (p = pasos) => usePreparacion.mockReturnValue({ estado: 'listo', pasos: p, recargar: vi.fn() });
 
+const salon = (cargando: boolean, ocupados = 0, capacidad = 0) =>
+  useSalon.mockReturnValue({ cargando, derivado: { ocupacion: { ocupados, capacidad, porcentaje: capacidad === 0 ? 0 : Math.round((ocupados / capacidad) * 100) } } });
+
+beforeEach(() => salon(false));
 afterEach(() => {
   cleanup();
   usePreparacion.mockReset();
+  useSalon.mockReset();
 });
 
 const titulo = (t: string) => screen.getByText(t, { selector: 'summary span' });
 const detalle = (t: string) => titulo(t).closest('details')!;
 
 describe('PasosInicio', () => {
+  it('muestra la ocupación del salón (30 de 120 → 25%)', () => {
+    listo();
+    salon(false, 30, 120);
+    render(<PasosInicio />);
+    expect(screen.getByText('Ocupación: 30 de 120 lugares (25%)')).toBeTruthy();
+  });
+
+  it('sin capacidad muestra 0% y mientras el salón carga no muestra ocupación', () => {
+    listo();
+    const { unmount } = render(<PasosInicio />);
+    expect(screen.getByText('Ocupación: 0 de 0 lugares (0%)')).toBeTruthy();
+    unmount();
+    salon(true);
+    render(<PasosInicio />);
+    expect(screen.queryByText(/Ocupación/)).toBeNull();
+  });
+
   it('cuenta los pasos listos y muestra un desplegable cerrado por paso', () => {
     listo();
     render(<PasosInicio />);

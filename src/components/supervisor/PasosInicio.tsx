@@ -3,16 +3,20 @@
 import Link from 'next/link';
 import { Check, ChevronDown, X } from 'lucide-react';
 import { Boton } from '@/components/ui/Boton';
+import { useSalon } from '@/state/SalonProvider';
 import { IconoEstado, textoEstado } from './BarraPasos';
 import { ENLACE_PRIMARIO, EstadoDeCarga } from './EstadoPreparacion';
 import { usePreparacion } from './usePreparacion';
 
 export function PasosInicio() {
   const { estado, pasos, recargar } = usePreparacion();
+  const { cargando, derivado } = useSalon();
   const revisado = estado === 'listo';
+  const { ocupados, capacidad, porcentaje } = derivado.ocupacion;
 
   return (
     <div className="flex flex-col gap-3">
+      {!cargando && <p className="text-base text-texto-suave">{`Ocupación: ${ocupados} de ${capacidad} lugares (${porcentaje}%)`}</p>}
       <EstadoDeCarga estado={estado} recargar={recargar} />
       {revisado && <p className="text-base text-texto-suave">{pasos.filter((p) => p.completo).length} de {pasos.length} pasos listos</p>}
       <ol className="flex flex-col gap-2">
