@@ -39,18 +39,20 @@ export const PASOS: ReadonlyArray<{ id: PasoId; titulo: string; ruta: string }> 
 ];
 
 /** Minúsculas y sin acentos: "Catán", "catan" y "CATÁN" son la misma sede. */
-const normalizar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const normalizar = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`;
 
-/** True si `a` y `b` difieren en a lo sumo una letra (sustitución, alta o baja). */
+/** True si `a` y `b` difieren en a lo sumo una letra (sustitución, alta o baja); un dígito de diferencia ("Sede 1" / "Sede 2") no cuenta como error de tipeo. */
 function casiIguales(a: string, b: string): boolean {
   if (Math.abs(a.length - b.length) > 1) return false;
   let i = 0;
   while (i < a.length && i < b.length && a[i] === b[i]) i++;
-  if (a.length === b.length) return a.slice(i + 1) === b.slice(i + 1);
+  if (a.length === b.length) {
+    return a.slice(i + 1) === b.slice(i + 1) && !/\d/.test(a[i] ?? '') && !/\d/.test(b[i] ?? '');
+  }
   const [corta, larga] = a.length < b.length ? [a, b] : [b, a];
-  return corta.slice(i) === larga.slice(i + 1);
+  return corta.slice(i) === larga.slice(i + 1) && !/\d/.test(larga[i]);
 }
 
 function calcularSalon(d: DatosPreparacion) {
@@ -122,19 +124,31 @@ function calcularReservas(d: DatosPreparacion) {
   for (const ses of d.sesiones) {
     if (ses.reservas.length === 0) avisos.push(`La sesión ${ses.nombre} no tiene reservas`);
     const porSector = new Map<number, number>();
+    const porSeccion = new Map<Seccion, number>();
     for (const r of ses.reservas) {
       total++;
       lugares += r.cantidad;
       usadas.add(normalizar(r.sede));
+      porSeccion.set(r.seccion, (porSeccion.get(r.seccion) ?? 0) + r.cantidad);
       if (!r.sector) continue;
       const nombre = normalizar(r.sector);
       for (const s of d.sectores) {
         if (s.seccion === r.seccion && normalizar(s.nombre) === nombre) porSector.set(s.id, (porSector.get(s.id) ?? 0) + r.cantidad);
       }
     }
+    const seccionesAvisadas = new Set<Seccion>();
     for (const s of d.sectores) {
       const reservado = porSector.get(s.id) ?? 0;
-      if (reservado > s.capacidad) avisos.push(`En ${ses.nombre}, las reservas del sector ${s.nombre} suman ${reservado} y tiene ${s.capacidad} lugares`);
+      if (reservado > s.capacidad) {
+        avisos.push(`En ${ses.nombre}, las reservas del sector ${s.nombre} suman ${reservado} y tiene ${s.capacidad} lugares`);
+        seccionesAvisadas.add(s.seccion);
+      }
+    }
+    // Reservas sin sector: la capacidad que importa es la pública de toda la sección.
+    for (const [seccion, reservado] of porSeccion) {
+      if (seccionesAvisadas.has(seccion)) continue;
+      const capacidad = d.filas.filter((f) => f.seccion === seccion).reduce((suma, f) => suma + capacidadPublicaFila(f), 0);
+      if (reservado > capacidad) avisos.push(`En ${ses.nombre}, las reservas de la sección ${seccion} suman ${reservado} y tiene ${capacidad} lugares públicos`);
     }
   }
   for (const s of d.sedes) if (!usadas.has(normalizar(s.nombre))) avisos.push(`La sede ${s.nombre} no tiene ninguna reserva`);
@@ -182,13 +196,19 @@ export function calcularPasos(d: DatosPreparacion): Paso[] {
 
   return PASOS.map((p, i) => {
     const r = todos[p.id];
-    const anteriorIncompleto = PASOS.slice(0, i).reverse().find((a) => !completoDe(todos[a.id]));
-    const bloqueado = p.id !== 'qr' && anteriorIncompleto !== undefined;
+    const completo = completoDe(r);
+    // §7c: un paso ya completo no se vuelve a bloquear si uno anterior se rompe.
+    // Revisión nombra el primer paso 1-4 que falta (QR depende de ellos); el resto, el más cercano anterior.
+    const bloqueante = completo || p.id === 'qr'
+      ? undefined
+      : p.id === 'revision'
+        ? PASOS.find((a) => a.id === faltante)
+        : PASOS.slice(0, i).reverse().find((a) => !completoDe(todos[a.id]));
     return {
       ...p,
-      completo: completoDe(r),
-      bloqueado,
-      ...(bloqueado && anteriorIncompleto ? { motivoBloqueo: `Se abre al completar ${anteriorIncompleto.titulo}` } : {}),
+      completo,
+      bloqueado: bloqueante !== undefined,
+      ...(bloqueante ? { motivoBloqueo: `Se abre al completar ${bloqueante.titulo}` } : {}),
       resumen: r.resumen,
       requisitos: r.requisitos,
       avisos: r.avisos,
