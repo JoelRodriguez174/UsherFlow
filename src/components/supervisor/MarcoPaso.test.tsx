@@ -37,7 +37,7 @@ describe('MarcoPaso', () => {
   });
 
   it('un paso bloqueado no renderiza el contenido y manda al paso que lo bloquea', () => {
-    listo({ sedes: { bloqueado: true, motivoBloqueo: 'Se abre al completar Salón' } });
+    listo({ sedes: { bloqueado: true, bloqueadoPor: 'salon', motivoBloqueo: 'texto que no se parsea' } });
     render(<MarcoPaso paso="sedes"><p>formulario de sedes</p></MarcoPaso>);
     expect(screen.queryByText('formulario de sedes')).toBeNull();
     expect(screen.getByText('Completá Salón primero')).toBeTruthy();
@@ -45,10 +45,10 @@ describe('MarcoPaso', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
   });
 
-  it('sin motivoBloqueo usa el paso anterior incompleto más cercano', () => {
-    listo({ salon: { completo: true }, sedes: { bloqueado: true } });
-    render(<MarcoPaso paso="sedes"><p>x</p></MarcoPaso>);
-    expect(screen.getByText('Completá Sesiones primero')).toBeTruthy();
+  it('nombra el paso que dice bloqueadoPor (Revisión apunta al primero que falta, no a QR)', () => {
+    listo({ revision: { bloqueado: true, bloqueadoPor: 'sesiones' } });
+    render(<MarcoPaso paso="revision"><p>x</p></MarcoPaso>);
+    expect(screen.getByRole('link', { name: 'Ir a Sesiones' }).getAttribute('href')).toBe('/supervisor/sesiones');
   });
 
   it('"Siguiente" queda deshabilitado con el motivo mientras el paso no está completo', () => {
@@ -57,6 +57,7 @@ describe('MarcoPaso', () => {
     const boton = screen.getByRole('button', { name: 'Siguiente: Sesiones' }) as HTMLButtonElement;
     expect(boton.disabled).toBe(true);
     expect(screen.getByText('Falta: Filas cargadas')).toBeTruthy();
+    expect(boton.getAttribute('aria-describedby')).toBe(screen.getByText('Falta: Filas cargadas').id);
     expect(screen.queryByRole('link', { name: /siguiente/i })).toBeNull();
   });
 

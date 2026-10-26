@@ -60,6 +60,7 @@ describe('calcularPasos: evento vacío', () => {
     expect(pasos[2].motivoBloqueo).toBe('Se abre al completar Sesiones');
     expect(pasos[3].motivoBloqueo).toBe('Se abre al completar Sedes');
     expect(pasos[5].motivoBloqueo).toBe('Se abre al completar Salón');
+    expect(pasos.map((x) => x.bloqueadoPor)).toEqual([undefined, 'salon', 'sesiones', 'sedes', undefined, 'salon']);
     expect([1, 2, 3, 5].every((i) => pasos[i].bloqueado)).toBe(true);
   });
 
@@ -162,6 +163,7 @@ describe('calcularPasos: sesiones, sedes, reservas', () => {
     const rev = paso(completo({ sesiones: [] }), 'revision');
     expect(rev.bloqueado).toBe(true);
     expect(rev.motivoBloqueo).toBe('Se abre al completar Sesiones');
+    expect(rev.bloqueadoPor).toBe('sesiones');
   });
 });
 

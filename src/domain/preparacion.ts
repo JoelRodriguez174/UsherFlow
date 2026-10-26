@@ -11,6 +11,8 @@ export type Paso = {
   completo: boolean;
   bloqueado: boolean;
   motivoBloqueo?: string;
+  /** Paso que hay que completar antes (presente solo si `bloqueado`). */
+  bloqueadoPor?: PasoId;
   resumen: string;
   requisitos: Requisito[];
   avisos: string[];
@@ -208,7 +210,7 @@ export function calcularPasos(d: DatosPreparacion): Paso[] {
       ...p,
       completo,
       bloqueado: bloqueante !== undefined,
-      ...(bloqueante ? { motivoBloqueo: `Se abre al completar ${bloqueante.titulo}` } : {}),
+      ...(bloqueante ? { motivoBloqueo: `Se abre al completar ${bloqueante.titulo}`, bloqueadoPor: bloqueante.id } : {}),
       resumen: r.resumen,
       requisitos: r.requisitos,
       avisos: r.avisos,
