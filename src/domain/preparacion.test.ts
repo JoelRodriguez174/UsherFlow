@@ -59,7 +59,7 @@ describe('calcularPasos: evento vacío', () => {
     expect(pasos[1].motivoBloqueo).toBe('Se abre al completar Salón');
     expect(pasos[2].motivoBloqueo).toBe('Se abre al completar Sesiones');
     expect(pasos[3].motivoBloqueo).toBe('Se abre al completar Sedes');
-    expect(pasos[5].motivoBloqueo).toBe('Se abre al completar QR de ujieres');
+    expect(pasos[5].motivoBloqueo).toBe('Se abre al completar Salón');
     expect([1, 2, 3, 5].every((i) => pasos[i].bloqueado)).toBe(true);
   });
 
@@ -137,10 +137,31 @@ describe('calcularPasos: sesiones, sedes, reservas', () => {
     expect(p.find((x) => x.id === 'sedes')!.bloqueado).toBe(true);
   });
 
-  it('si un paso anterior se rompe, los siguientes se bloquean con el más cercano incompleto', () => {
+  it('un paso incompleto se bloquea con el más cercano incompleto anterior', () => {
     const p = calcularPasos(completo({ sesiones: [] }));
-    expect(p.find((x) => x.id === 'sedes')!.motivoBloqueo).toBe('Se abre al completar Sesiones');
-    expect(p.find((x) => x.id === 'reservas')!.motivoBloqueo).toBe('Se abre al completar Sesiones');
+    const reservas = p.find((x) => x.id === 'reservas')!;
+    expect(reservas.bloqueado).toBe(true);
+    expect(reservas.motivoBloqueo).toBe('Se abre al completar Sesiones');
+  });
+
+  it('un paso ya completo no se vuelve a bloquear si un anterior se rompe (§7c)', () => {
+    const d = completo({ filas: [fila('centro', 1), fila('centro', 2), fila('centro', 3)] });
+    const p = calcularPasos(d);
+    expect(p.find((x) => x.id === 'salon')!.completo).toBe(false);
+    for (const id of ['sesiones', 'sedes', 'reservas'] as const) {
+      const x = p.find((q) => q.id === id)!;
+      expect(x.completo).toBe(true);
+      expect(x.bloqueado).toBe(false);
+      expect(x.motivoBloqueo).toBeUndefined();
+    }
+    expect(p.find((x) => x.id === 'qr')!.bloqueado).toBe(false);
+    expect(p.find((x) => x.id === 'revision')!.bloqueado).toBe(true);
+  });
+
+  it('revisión nombra el primer incompleto entre 1 y 4, no QR', () => {
+    const rev = paso(completo({ sesiones: [] }), 'revision');
+    expect(rev.bloqueado).toBe(true);
+    expect(rev.motivoBloqueo).toBe('Se abre al completar Sesiones');
   });
 });
 
@@ -205,7 +226,7 @@ describe('calcularPasos: avisos que no cambian completo', () => {
   it('fechaLimite null no rompe y avisa que falta', () => {
     const p = paso(completo({ fechaLimite: null }), 'sedes');
     expect(p.completo).toBe(true);
-    expect(p.avisos.some((a) => a.includes('fecha límite'))).toBe(true);
+    expect(p.avisos).toEqual(['No hay fecha límite de preferencias']);
   });
 
   it('sesión sin reservas', () => {
@@ -233,5 +254,32 @@ describe('calcularPasos: avisos que no cambian completo', () => {
     expect(p.avisos.some((a) => a.includes('Catán') && a.includes('Catam'))).toBe(true);
     const lejos = paso(completo({ sedes: [sede('Catán'), sede('Morón')] }), 'sedes');
     expect(lejos.avisos.some((a) => a.includes('parecidos'))).toBe(false);
+  });
+
+  it('casi iguales también por una letra de más o de menos', () => {
+    const p = paso(completo({ sedes: [sede('Catan'), sede('Catana')] }), 'sedes');
+    expect(p.avisos.some((a) => a.includes('parecidos'))).toBe(true);
+    const p2 = paso(completo({ sedes: [sede('Atan'), sede('Catan')] }), 'sedes');
+    expect(p2.avisos.some((a) => a.includes('parecidos'))).toBe(true);
+  });
+
+  it('sedes que difieren solo en un dígito no son casi iguales', () => {
+    for (const par of [['Sede 1', 'Sede 2'], ['Sede 1', 'Sede 12']]) {
+      const p = paso(completo({ sedes: par.map((n) => sede(n)) }), 'sedes');
+      expect(p.avisos.some((a) => a.includes('parecidos'))).toBe(false);
+    }
+  });
+
+  it('reservas sin sector que superan la capacidad pública de la sección', () => {
+    const res = (cantidad: number) => completo({ sesiones: [sesion([{ sede: 'Catán', seccion: 'centro', cantidad }])] });
+    const p = paso(res(21), 'reservas');
+    expect(p.avisos).toEqual(['En Jueves, las reservas de la sección centro suman 21 y tiene 20 lugares públicos']);
+    expect(p.completo).toBe(true);
+    expect(paso(res(20), 'reservas').avisos).toEqual([]);
+  });
+
+  it('el sobrecupo de un sector no repite el aviso de su sección', () => {
+    const d = completo({ sesiones: [sesion([{ sede: 'Catán', seccion: 'centro', cantidad: 25, sector: 'S1' }])] });
+    expect(paso(d, 'reservas').avisos).toHaveLength(1);
   });
 });
