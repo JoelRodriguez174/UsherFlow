@@ -51,9 +51,11 @@ describe('PasosInicio', () => {
     todos.forEach((d) => expect(d.open).toBe(false));
   });
 
-  it('cada paso muestra título, estado accesible y resumen', () => {
+  it('cada paso muestra número, título, estado accesible (después del título) y resumen', () => {
     listo();
     render(<PasosInicio />);
+    const resumenSalon = detalle('Salón').querySelector('summary')!;
+    expect(resumenSalon.textContent).toMatch(/^1 Salón Listo/);
     const salon = detalle('Salón');
     expect(within(salon).getByText('Listo')).toBeTruthy();
     expect(within(salon).getByText('2 sectores · 80 lugares')).toBeTruthy();
@@ -89,7 +91,8 @@ describe('PasosInicio', () => {
     const d = detalle('Sedes');
     expect(within(d).queryByRole('link')).toBeNull();
     expect((within(d).getByRole('button', { name: /completar este paso/i }) as HTMLButtonElement).disabled).toBe(true);
-    expect(within(d).getByText('Se abre al completar Sesiones')).toBeTruthy();
+    const motivo = within(d).getByText('Se abre al completar Sesiones');
+    expect(within(d).getByRole('button').getAttribute('aria-describedby')).toBe(motivo.id);
   });
 
   it('en error ningún paso muestra listo y se puede reintentar', async () => {
@@ -97,7 +100,10 @@ describe('PasosInicio', () => {
     usePreparacion.mockReturnValue({ estado: 'error', pasos: pasos.map((p) => ({ ...p, completo: true })), recargar });
     render(<PasosInicio />);
     expect(screen.queryByText('Listo')).toBeNull();
-    expect(screen.getByText('0 de 6 pasos listos')).toBeTruthy();
+    expect(screen.queryByText(/pasos listos/)).toBeNull();
+    expect(screen.queryByText('Bloqueado')).toBeNull();
+    expect(screen.getAllByText('Sin revisar')).toHaveLength(6);
+    expect(screen.queryByText('Se abre al completar Sesiones')).toBeNull();
     expect(screen.getByText('No pudimos revisar el estado')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Probar de nuevo' }));
     expect(recargar).toHaveBeenCalledTimes(1);
@@ -108,5 +114,7 @@ describe('PasosInicio', () => {
     render(<PasosInicio />);
     expect(screen.getByText('Cargando…')).toBeTruthy();
     expect(screen.queryByText('Listo')).toBeNull();
+    expect(screen.queryByText(/pasos listos/)).toBeNull();
+    expect(screen.getAllByText('Sin revisar')).toHaveLength(6);
   });
 });

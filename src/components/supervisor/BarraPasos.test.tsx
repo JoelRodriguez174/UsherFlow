@@ -46,5 +46,23 @@ describe('BarraPasos', () => {
     usePreparacion.mockReturnValue({ estado: 'error', pasos, recargar: vi.fn() });
     render(<BarraPasos actual="salon" />);
     expect(screen.queryByText('Listo')).toBeNull();
+    expect(screen.queryByText('Bloqueado')).toBeNull();
+    expect(screen.getAllByText('Sin revisar')).toHaveLength(6);
+  });
+
+  it('el nombre accesible empieza por el título y termina con el estado', () => {
+    usePreparacion.mockReturnValue({ estado: 'listo', pasos, recargar: vi.fn() });
+    render(<BarraPasos actual="salon" />);
+    expect(screen.getByRole('link', { name: '1. Salón Listo' })).toBeTruthy();
+  });
+
+  it('trae el chip actual a la vista', () => {
+    usePreparacion.mockReturnValue({ estado: 'listo', pasos, recargar: vi.fn() });
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    render(<BarraPasos actual="qr" />);
+    expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('link', { current: 'step' }));
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
   });
 });
