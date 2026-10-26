@@ -58,9 +58,9 @@ describe('calcularPasos: evento vacío', () => {
     expect(pasos[0].bloqueado).toBe(false);
     expect(pasos[1].motivoBloqueo).toBe('Se abre al completar Salón');
     expect(pasos[2].motivoBloqueo).toBe('Se abre al completar Sesiones');
-    expect(pasos[3].motivoBloqueo).toBe('Se abre al completar Sedes');
+    expect(pasos[3].motivoBloqueo).toBe('Se abre al completar Sesiones');
     expect(pasos[5].motivoBloqueo).toBe('Se abre al completar Salón');
-    expect(pasos.map((x) => x.bloqueadoPor)).toEqual([undefined, 'salon', 'sesiones', 'sedes', undefined, 'salon']);
+    expect(pasos.map((x) => x.bloqueadoPor)).toEqual([undefined, 'salon', 'sesiones', 'sesiones', undefined, 'salon']);
     expect([1, 2, 3, 5].every((i) => pasos[i].bloqueado)).toBe(true);
   });
 
@@ -136,6 +136,18 @@ describe('calcularPasos: sesiones, sedes, reservas', () => {
     const p = calcularPasos(completo({ sesiones: [], sedes: [] }));
     expect(p.find((x) => x.id === 'sesiones')!.bloqueado).toBe(false);
     expect(p.find((x) => x.id === 'sedes')!.bloqueado).toBe(true);
+  });
+
+  it('Reservas no depende de Sedes (§7d): con salón y sesiones listos y 0 sedes no se bloquea', () => {
+    const r = paso(completo({ sedes: [], sesiones: [sesion()] }), 'reservas');
+    expect(r.bloqueado).toBe(false);
+    expect(r.bloqueadoPor).toBeUndefined();
+  });
+
+  it('Reservas nombra Salón si es lo único que falta antes (aunque falten sedes)', () => {
+    const r = paso(completo({ sedes: [], sesiones: [sesion()], filas: [fila('centro', 1), fila('centro', 2), fila('centro', 3)] }), 'reservas');
+    expect(r.bloqueado).toBe(true);
+    expect(r.bloqueadoPor).toBe('salon');
   });
 
   it('un paso incompleto se bloquea con el más cercano incompleto anterior', () => {

@@ -201,11 +201,12 @@ export function calcularPasos(d: DatosPreparacion): Paso[] {
     const completo = completoDe(r);
     // §7c: un paso ya completo no se vuelve a bloquear si uno anterior se rompe.
     // Revisión nombra el primer paso 1-4 que falta (QR depende de ellos); el resto, el más cercano anterior.
+    // Reservas no depende de Sedes (§7d): las sedes se crean solas al importar reservas.
     const bloqueante = completo || p.id === 'qr'
       ? undefined
       : p.id === 'revision'
         ? PASOS.find((a) => a.id === faltante)
-        : PASOS.slice(0, i).reverse().find((a) => !completoDe(todos[a.id]));
+        : PASOS.slice(0, i).reverse().find((a) => !completoDe(todos[a.id]) && !(p.id === 'reservas' && a.id === 'sedes'));
     return {
       ...p,
       completo,
