@@ -84,7 +84,7 @@ export function SesionesPaso() {
 
   return (
     <MarcoPaso paso="sesiones">
-      <h1 className="font-titulo text-xl text-texto">Sesiones</h1>
+      <h1 className="font-titulo text-2xl text-texto">Sesiones</h1>
       <Aviso mensaje={mensaje?.texto ?? null} tipo={mensaje?.tipo} onCerrar={() => setMensaje(null)} />
       {sesiones === null && mensaje === null && (
         <p role="status" className="text-base text-texto-suave">

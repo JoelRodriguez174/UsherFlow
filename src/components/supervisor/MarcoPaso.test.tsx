@@ -89,4 +89,32 @@ describe('MarcoPaso', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Probar de nuevo' }));
     expect(recargar).toHaveBeenCalledTimes(1);
   });
+
+  it('en error el paso QR conserva su contenido junto al aviso de error', () => {
+    usePreparacion.mockReturnValue({ estado: 'error', pasos: armar(), recargar: vi.fn() });
+    render(<MarcoPaso paso="qr"><p>enlaces</p></MarcoPaso>);
+    expect(screen.getByText('No pudimos revisar el estado')).toBeTruthy();
+    expect(screen.getByText('enlaces')).toBeTruthy();
+  });
+
+  it('muestra los avisos de su paso una sola vez y no los de otros', () => {
+    listo({ sesiones: { avisos: ['La sesión Jueves ya empezó'] }, sedes: { avisos: ['aviso de sedes'] } });
+    render(<MarcoPaso paso="sesiones"><p>x</p></MarcoPaso>);
+    expect(screen.getAllByText('La sesión Jueves ya empezó')).toHaveLength(1);
+    expect(screen.queryByText('aviso de sedes')).toBeNull();
+  });
+
+  it('sin avisos no muestra la lista, ni en error ni en Revisión (que ya los detalla)', () => {
+    listo();
+    const { unmount } = render(<MarcoPaso paso="sesiones"><p>x</p></MarcoPaso>);
+    expect(screen.queryByRole('list', { name: 'Avisos' })).toBeNull();
+    unmount();
+    usePreparacion.mockReturnValue({ estado: 'error', pasos: armar({ sesiones: { avisos: ['a'] } }), recargar: vi.fn() });
+    const e = render(<MarcoPaso paso="sesiones"><p>x</p></MarcoPaso>);
+    expect(screen.queryByText('a')).toBeNull();
+    e.unmount();
+    listo({ revision: { avisos: ['agregado de Revisión'] } });
+    render(<MarcoPaso paso="revision"><p>x</p></MarcoPaso>);
+    expect(screen.queryByText('agregado de Revisión')).toBeNull();
+  });
 });

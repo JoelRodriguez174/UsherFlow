@@ -126,6 +126,7 @@ describe('QrPaso: avisos y sin bloqueo', () => {
       recargar,
     });
     render(<QrPaso />);
+    expect(screen.getAllByText(aviso)).toHaveLength(1); // una sola vez, la pone MarcoPaso
     const el = screen.getByText(aviso);
     const enlaces = screen.getByRole('heading', { name: /enlaces para ujieres/i });
     expect(el.compareDocumentPosition(enlaces) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -146,6 +147,16 @@ describe('QrPaso: avisos y sin bloqueo', () => {
     expect(screen.queryByText(/primero/i)).toBeNull();
     expect(screen.getByText(`${ORIGEN}/entrar?k=UJIER1&rol=puerta`)).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'QR de ujieres', level: 1 })).toBeTruthy();
+  });
+});
+
+describe('QrPaso: error de carga', () => {
+  it('con estado error muestra el error pero también los enlaces y "Renovar claves"', () => {
+    usePreparacion.mockReturnValue({ estado: 'error', pasos: pasosCon(), recargar });
+    render(<QrPaso />);
+    expect(screen.getByText('No pudimos revisar el estado')).toBeTruthy();
+    expect(screen.getByText(`${ORIGEN}/entrar?k=UJIER1&rol=puerta`)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Renovar claves' })).toBeTruthy();
   });
 });
 

@@ -9,8 +9,9 @@ import { ENLACE_PRIMARIO, EstadoDeCarga } from './EstadoPreparacion';
 import { usePreparacion } from './usePreparacion';
 
 /**
- * Marco común de las pantallas de cada paso: barra de pasos, el contenido (solo si el paso está listo para
- * mostrarse y no bloqueado) y "Siguiente". Es el `<main>` de la página; el título lo pone el contenido.
+ * Marco común de las pantallas de cada paso: barra de pasos, avisos del paso, el contenido (solo si el paso está
+ * listo para mostrarse y no bloqueado) y "Siguiente". Es el `<main>` de la página; el título lo pone el contenido.
+ * QR es la excepción: sus enlaces y "Renovar claves" no dependen del estado de preparación, así que se ven siempre.
  */
 export function MarcoPaso({ paso: id, children }: { paso: PasoId; children: ReactNode }) {
   const { estado, pasos, recargar } = usePreparacion();
@@ -20,7 +21,12 @@ export function MarcoPaso({ paso: id, children }: { paso: PasoId; children: Reac
 
   let cuerpo: ReactNode;
   if (estado !== 'listo') {
-    cuerpo = <EstadoDeCarga estado={estado} recargar={recargar} />;
+    cuerpo = (
+      <>
+        <EstadoDeCarga estado={estado} recargar={recargar} />
+        {id === 'qr' && children}
+      </>
+    );
   } else if (paso.bloqueado) {
     const bloqueante = pasos.find((p) => p.id === paso.bloqueadoPor);
     cuerpo = (
@@ -33,6 +39,12 @@ export function MarcoPaso({ paso: id, children }: { paso: PasoId; children: Reac
     const falta = paso.requisitos.filter((r) => !r.ok).map((r) => r.texto).join(', ');
     cuerpo = (
       <>
+        {/* Revisión ya lista los avisos de cada paso: repetirlos acá los duplicaría. */}
+        {id !== 'revision' && paso.avisos.length > 0 && (
+          <ul aria-label="Avisos" className="flex flex-col gap-1 rounded-2xl border border-advertencia bg-superficie-alta p-3 text-sm text-advertencia">
+            {paso.avisos.map((a) => <li key={a}>{a}</li>)}
+          </ul>
+        )}
         {children}
         {siguiente &&
           (paso.completo ? (

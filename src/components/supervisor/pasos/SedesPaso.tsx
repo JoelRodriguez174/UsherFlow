@@ -18,7 +18,7 @@ import { usePreparacion } from '../usePreparacion';
 
 export function SedesPaso() {
   const { claves } = useSupervisor();
-  const { pasos, recargar } = usePreparacion();
+  const { recargar } = usePreparacion();
   const { llamarOk, mensaje, setMensaje } = useRpcSupervisor(claves.claveSupervisor);
   const [fecha, setFecha] = useState('');
   const [sedes, setSedes] = useState<SedeServidor[]>([]);
@@ -28,7 +28,6 @@ export function SedesPaso() {
   const [nuevaSede, setNuevaSede] = useState('');
   const idFecha = useId();
   const idBase = useId();
-  const avisos = pasos.find((p) => p.id === 'sedes')?.avisos ?? [];
 
   /** Trae el mapa; la carga inicial llena también la fecha, las siguientes solo refrescan las sedes (no pisan lo que se edita). */
   const cargar = useCallback(
@@ -99,17 +98,6 @@ export function SedesPaso() {
         <p role="status" className="text-base text-texto-suave">
           Cargando…
         </p>
-      )}
-
-      {avisos.length > 0 && (
-        <details className="rounded-2xl border border-borde bg-superficie-alta p-3">
-          <summary className="min-h-11 cursor-pointer text-base text-advertencia">{`Avisos (${avisos.length})`}</summary>
-          <ul className="flex flex-col gap-1 pt-2 text-sm text-advertencia">
-            {avisos.map((a) => (
-              <li key={a}>{a}</li>
-            ))}
-          </ul>
-        </details>
       )}
 
       <section aria-labelledby={`${idBase}-fecha`} className="flex flex-col gap-3">

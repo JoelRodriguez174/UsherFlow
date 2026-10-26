@@ -34,8 +34,7 @@ const MAPA = {
 function llamadas(nombre: string) {
   return llamarRpc.mock.calls.filter((c) => c[0] === nombre);
 }
-const pasosCon = (avisosSedes: string[] = []) =>
-  PASOS.map((p) => ({ ...p, completo: true, bloqueado: false, resumen: '', requisitos: [], avisos: p.id === 'sedes' ? avisosSedes : ['aviso de otro paso'] }));
+const pasosCon = () => PASOS.map((p) => ({ ...p, completo: true, bloqueado: false, resumen: '', requisitos: [], avisos: [] }));
 
 beforeEach(() => {
   llamarRpc.mockReset();
@@ -142,9 +141,11 @@ describe('SedesPaso', () => {
         nombre === 'obtener_mapa_supervisor' ? MAPA : { success: false, error: 'NOMBRE_INVALIDO' },
       );
       render(<SedesPaso />);
-      await user.type(await screen.findByLabelText('Agregar sede'), '   ');
+      const input = (await screen.findByLabelText('Agregar sede')) as HTMLInputElement;
+      await user.type(input, '   ');
       await user.click(screen.getByRole('button', { name: 'Agregar' }));
       expect(await screen.findByText('msg:NOMBRE_INVALIDO')).toBeTruthy();
+      expect(input.value).toBe('   ');
       expect(recargar).not.toHaveBeenCalled();
     });
 
@@ -158,19 +159,5 @@ describe('SedesPaso', () => {
   it('explica que los nombres no distinguen mayúsculas ni acentos', async () => {
     render(<SedesPaso />);
     expect(await screen.findByText('Los nombres no distinguen mayúsculas ni acentos.')).toBeTruthy();
-  });
-
-  it('muestra los avisos del paso Sedes en un desplegable y no los de otros pasos', async () => {
-    usePreparacion.mockReturnValue({ estado: 'listo', pasos: pasosCon(['La sede Moreno no tiene enlace de acceso']), recargar });
-    render(<SedesPaso />);
-    const aviso = await screen.findByText('La sede Moreno no tiene enlace de acceso');
-    expect(aviso.closest('details')).not.toBeNull();
-    expect(screen.queryByText('aviso de otro paso')).toBeNull();
-  });
-
-  it('sin avisos no muestra el desplegable de avisos', async () => {
-    render(<SedesPaso />);
-    await screen.findByLabelText('Fecha límite');
-    expect(document.querySelector('details')).toBeNull();
   });
 });

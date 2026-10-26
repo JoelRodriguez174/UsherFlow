@@ -8,9 +8,9 @@ import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
 import { Modal } from '@/components/ui/Modal';
 import { BotonConfirmar } from '../BotonConfirmar';
+import { CLASE_TITULO } from '../estilos';
 import { MarcoPaso } from '../MarcoPaso';
 import { TarjetaEnlace } from '../TarjetaEnlace';
-import { usePreparacion } from '../usePreparacion';
 import { useRpcSupervisor, type Mensaje } from '../useRpcSupervisor';
 import { useSupervisor } from '../SupervisorShell';
 
@@ -39,16 +39,13 @@ function esTexto(v: unknown): v is string {
   return typeof v === 'string' && v !== '';
 }
 
-/** Paso QR: nunca se bloquea (los avisos de salón incompleto se muestran arriba) y permite renovar las claves. */
+/** Paso QR: nunca se bloquea (el aviso de salón incompleto lo muestra `MarcoPaso`) y permite renovar las claves. */
 export function QrPaso() {
   const { claves, origen, renovar } = useSupervisor();
-  const { pasos } = usePreparacion();
   const { llamarOk, mensaje, setMensaje } = useRpcSupervisor(claves.claveSupervisor);
   const [confirmando, setConfirmando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [renovadas, setRenovadas] = useState<Mensaje>(consumirBandera);
-
-  const avisos = pasos.find((p) => p.id === 'qr')?.avisos ?? [];
 
   async function confirmar() {
     if (ocupado) return;
@@ -86,16 +83,6 @@ export function QrPaso() {
     <MarcoPaso paso="qr">
       <h1 className="font-titulo text-2xl text-texto">QR de ujieres</h1>
 
-      {avisos.length > 0 && (
-        <ul className="flex flex-col gap-2">
-          {avisos.map((a) => (
-            <li key={a} className="rounded-2xl border border-borde bg-superficie-alta p-4 text-base text-texto">
-              {a}
-            </li>
-          ))}
-        </ul>
-      )}
-
       <Aviso
         mensaje={(mensaje ?? renovadas)?.texto ?? null}
         tipo={(mensaje ?? renovadas)?.tipo}
@@ -106,7 +93,7 @@ export function QrPaso() {
       />
 
       <section aria-labelledby="qr-ujieres" className="flex flex-col gap-3">
-        <h2 id="qr-ujieres" className="text-sm font-semibold uppercase tracking-wider text-texto-suave">
+        <h2 id="qr-ujieres" className={CLASE_TITULO}>
           Enlaces para ujieres
         </h2>
         <p className="text-base text-texto-suave">Cada ujier escanea el QR de su lugar con la cámara del celular.</p>
@@ -120,7 +107,7 @@ export function QrPaso() {
       </section>
 
       <section aria-labelledby="qr-propio" className="flex flex-col gap-3">
-        <h2 id="qr-propio" className="text-sm font-semibold uppercase tracking-wider text-texto-suave">
+        <h2 id="qr-propio" className={CLASE_TITULO}>
           Tu acceso de supervisor
         </h2>
         <TarjetaEnlace
@@ -131,7 +118,7 @@ export function QrPaso() {
       </section>
 
       <section aria-labelledby="qr-acciones" className="flex flex-col gap-3">
-        <h2 id="qr-acciones" className="text-sm font-semibold uppercase tracking-wider text-texto-suave">
+        <h2 id="qr-acciones" className={CLASE_TITULO}>
           Acciones
         </h2>
         <Boton variante="secundario" tamano="grande" onClick={() => setConfirmando(true)}>
