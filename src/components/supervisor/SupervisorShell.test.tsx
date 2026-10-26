@@ -114,6 +114,18 @@ describe('SupervisorShell', () => {
     expect(screen.getByTestId('estado').textContent).toBe('listo');
   });
 
+  it('si tras cargar bien una recarga falla pasa a error y ningún paso queda completo', async () => {
+    responder({ obtener_reservas: { ...RESERVAS, sesiones: [{ id: 's1', nombre: 'Jueves', inicio_at: '2099-01-01T00:00:00Z', reservas: [] }] } });
+    const user = userEvent.setup();
+    montar();
+    await waitFor(() => expect(screen.getByTestId('estado').textContent).toBe('listo'));
+    expect(screen.getByTestId('completos').textContent).toBe('1'); // Sesiones
+    responder({ obtener_reservas: new Error('red') });
+    await user.click(screen.getByText('recargar'));
+    await waitFor(() => expect(screen.getByTestId('estado').textContent).toBe('error'));
+    expect(screen.getByTestId('completos').textContent).toBe('0');
+  });
+
   it('recargar tras un error vuelve a listo', async () => {
     responder({ obtener_reservas: new Error('red') });
     const user = userEvent.setup();

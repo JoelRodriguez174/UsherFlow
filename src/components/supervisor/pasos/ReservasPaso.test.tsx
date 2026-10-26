@@ -117,7 +117,7 @@ describe('ReservasPaso', () => {
     const user = userEvent.setup();
     render(<ReservasPaso />);
     const tabla = await screen.findByRole('table', { name: 'Reservas de Domingo 10' });
-    await user.click(within(tabla.parentElement as HTMLElement).getByRole('button', { name: 'Guardar reservas' }));
+    await user.click(within(tabla.parentElement!.parentElement as HTMLElement).getByRole('button', { name: 'Guardar reservas' }));
     await waitFor(() => expect(llamadas('importar_reservas')).toHaveLength(1));
     expect(llamadas('importar_reservas')[0][1]).toEqual({
       p_clave: 'SUPER1',

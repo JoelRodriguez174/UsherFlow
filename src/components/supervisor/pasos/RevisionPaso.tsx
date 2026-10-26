@@ -24,13 +24,13 @@ export function RevisionPaso() {
           )}
           <ul className="flex flex-col gap-3">
             {previos.map((p) => {
-              const Icono = !p.completo ? CircleX : p.avisos.length > 0 ? TriangleAlert : CircleCheck;
+              const [Icono, color] = !p.completo ? [CircleX, 'text-peligro'] : p.avisos.length > 0 ? [TriangleAlert, 'text-advertencia'] : [CircleCheck, 'text-libre'];
               const estadoTexto = !p.completo ? 'Incompleto' : p.avisos.length > 0 ? 'Con avisos' : 'Listo';
               return (
                 <li key={p.id} className="flex flex-col gap-2 rounded-2xl border border-borde bg-superficie-alta p-4">
                   <div className="flex items-center justify-between gap-3">
                     <h2 className="flex items-center gap-2 text-base font-semibold text-texto">
-                      <Icono aria-hidden="true" className="size-5 shrink-0" />
+                      <Icono aria-hidden="true" className={`size-5 shrink-0 ${color}`} />
                       {p.titulo}
                       <span className="sr-only">: {estadoTexto}</span>
                     </h2>
