@@ -167,6 +167,47 @@ describe('QrPaso: renovar claves', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
+  it('el aviso de éxito sobrevive al remontaje (una sola vez)', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockResolvedValue({ success: true, clave_ujier: 'UJIER2', clave_supervisor: 'SUPER2' });
+    const primera = render(<QrPaso />);
+    await user.click(screen.getByRole('button', { name: 'Renovar claves' }));
+    armar();
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /sí, renovar/i }));
+    await waitFor(() => expect(renovar).toHaveBeenCalledTimes(1));
+    primera.unmount(); // el shell remonta el paso
+
+    const segunda = render(<QrPaso />);
+    expect(screen.getByRole('status').textContent).toMatch(/claves renovadas/i);
+    segunda.unmount();
+
+    render(<QrPaso />);
+    expect(screen.queryByText(/claves renovadas/i)).toBeNull();
+  });
+
+  it('sin storage disponible renueva igual y no muestra aviso al remontar', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockResolvedValue({ success: true, clave_ujier: 'UJIER2', clave_supervisor: 'SUPER2' });
+    const boom = () => {
+      throw new Error('storage bloqueado');
+    };
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(boom);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(boom);
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(boom);
+    try {
+      const primera = render(<QrPaso />);
+      await user.click(screen.getByRole('button', { name: 'Renovar claves' }));
+      armar();
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: /sí, renovar/i }));
+      await waitFor(() => expect(renovar).toHaveBeenCalledWith({ claveUjier: 'UJIER2', claveSupervisor: 'SUPER2' }));
+      primera.unmount();
+      render(<QrPaso />);
+      expect(screen.queryByText(/claves renovadas/i)).toBeNull();
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
   it('si la respuesta no trae claves válidas no cambia nada y avisa', async () => {
     const user = userEvent.setup();
     llamarRpc.mockResolvedValue({ success: true });

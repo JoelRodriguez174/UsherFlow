@@ -11,7 +11,7 @@ import { MarcoPaso } from '../MarcoPaso';
 import { TarjetaEnlace } from '../TarjetaEnlace';
 import { useArmado } from '../useArmado';
 import { usePreparacion } from '../usePreparacion';
-import { useRpcSupervisor } from '../useRpcSupervisor';
+import { useRpcSupervisor, type Mensaje } from '../useRpcSupervisor';
 import { useSupervisor } from '../SupervisorShell';
 
 const DESTINOS_UJIER: ReadonlyArray<{ rol: Rol; titulo: string; descripcion: string }> = [
@@ -20,6 +20,20 @@ const DESTINOS_UJIER: ReadonlyArray<{ rol: Rol; titulo: string; descripcion: str
   { rol: 'centro', titulo: 'Centro', descripcion: 'acceso de la sección Centro' },
   { rol: 'derecha', titulo: 'Derecha', descripcion: 'acceso de la sección Derecha' },
 ];
+
+const BANDERA_RENOVADAS = 'usherflow:claves-renovadas';
+const TEXTO_RENOVADAS = 'Claves renovadas. Los QR anteriores ya no sirven: repartí los nuevos.';
+
+/** `renovar()` remonta el paso: la bandera lleva el aviso de éxito a la montura nueva (se consume una sola vez). */
+function consumirBandera(): Mensaje {
+  try {
+    if (sessionStorage.getItem(BANDERA_RENOVADAS) === null) return null;
+    sessionStorage.removeItem(BANDERA_RENOVADAS);
+    return { tipo: 'info', texto: TEXTO_RENOVADAS };
+  } catch {
+    return null; // sin storage no hay aviso
+  }
+}
 
 function esTexto(v: unknown): v is string {
   return typeof v === 'string' && v !== '';
@@ -32,6 +46,7 @@ export function QrPaso() {
   const { llamarOk, mensaje, setMensaje } = useRpcSupervisor(claves.claveSupervisor);
   const [confirmando, setConfirmando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  const [renovadas, setRenovadas] = useState<Mensaje>(consumirBandera);
 
   const avisos = pasos.find((p) => p.id === 'qr')?.avisos ?? [];
 
@@ -47,7 +62,12 @@ export function QrPaso() {
       if (esTexto(nuevaUjier) && esTexto(nuevaSupervisor)) {
         // La sesión del propio supervisor sigue funcionando con la clave nueva.
         guardarAcceso(nuevaSupervisor, 'supervisor');
-        setMensaje({ tipo: 'info', texto: 'Claves renovadas. Los QR anteriores ya no sirven: repartí los nuevos.' });
+        setMensaje({ tipo: 'info', texto: TEXTO_RENOVADAS });
+        try {
+          sessionStorage.setItem(BANDERA_RENOVADAS, '1');
+        } catch {
+          // sin storage el aviso solo se ve si el paso no se remonta
+        }
         renovar({ claveUjier: nuevaUjier, claveSupervisor: nuevaSupervisor });
       } else {
         setMensaje({ tipo: 'error', texto: mensajeDeError('RESPUESTA_INVALIDA') });
@@ -76,7 +96,14 @@ export function QrPaso() {
         </ul>
       )}
 
-      <Aviso mensaje={mensaje?.texto ?? null} tipo={mensaje?.tipo} onCerrar={() => setMensaje(null)} />
+      <Aviso
+        mensaje={(mensaje ?? renovadas)?.texto ?? null}
+        tipo={(mensaje ?? renovadas)?.tipo}
+        onCerrar={() => {
+          setMensaje(null);
+          setRenovadas(null);
+        }}
+      />
 
       <section aria-labelledby="qr-ujieres" className="flex flex-col gap-3">
         <h2 id="qr-ujieres" className="text-sm font-semibold uppercase tracking-wider text-texto-suave">
