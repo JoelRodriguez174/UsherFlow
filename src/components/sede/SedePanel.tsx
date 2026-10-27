@@ -7,6 +7,7 @@ import { MapaSalon, type EstadoSector, type SectorMapa } from '@/components/mapa
 import { PantallaClaveInvalida } from '@/components/paginas/PantallaClaveInvalida';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
+import { ReservasSede } from './ReservasSede';
 
 type SectorServidor = { id: number; seccion: Seccion; nombre: string; fila_desde: number; fila_hasta: number };
 type SesionServidor = {
@@ -65,6 +66,8 @@ export function SedePanel({ clave }: { clave: string }) {
       else setFalloCarga(true); // si ya había mapa se conserva el último: el próximo sondeo reintenta
     }
   }, [clave]);
+
+  const alInvalidarClave = useCallback(() => setClaveInvalida(true), []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial desde el servidor
@@ -179,6 +182,14 @@ export function SedePanel({ clave }: { clave: string }) {
         )}
         <MapaSalon sectores={sectores} onAlternar={(id) => void alternar(id)} deshabilitado={!mapa.abierto} />
       </section>
+
+      <ReservasSede
+        clave={clave}
+        sectores={mapa.sectores}
+        abierto={mapa.abierto}
+        onGuardado={() => void cargar()}
+        onClaveInvalida={alInvalidarClave}
+      />
     </main>
   );
 }

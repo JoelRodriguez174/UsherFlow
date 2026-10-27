@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const llamarRpc = vi.fn();
@@ -47,6 +47,14 @@ const MAPA = {
   ],
 };
 
+const RESERVAS = {
+  success: true,
+  sesiones: [
+    { id: 's1', nombre: 'Domingo 10', reservas: [{ seccion: 'centro', cantidad: 6, sector: 'Centro A' }] },
+    { id: 's2', nombre: 'Domingo 17', reservas: [] },
+  ],
+};
+
 let mapa: Record<string, unknown>;
 
 function llamadas(nombre: string) {
@@ -59,6 +67,8 @@ beforeEach(() => {
   llamarRpc.mockReset();
   llamarRpc.mockImplementation(async (nombre: string, params: { p_sectores?: number[] }) => {
     if (nombre === 'obtener_mapa_sede') return mapa;
+    if (nombre === 'obtener_reservas_sede') return RESERVAS;
+    if (nombre === 'guardar_reservas_sede') return { success: true };
     mapa = { ...mapa, preferencias: params.p_sectores ?? [] }; // como el servidor: lo guardado vuelve en el siguiente mapa
     return { success: true };
   });
@@ -74,7 +84,7 @@ describe('SedePanel', () => {
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Moreno');
     expect(llamarRpc).toHaveBeenCalledWith('obtener_mapa_sede', { p_clave: 'SEDE1' });
     expect(screen.getByText(/Podés cambiar tu preferencia hasta el .*18:00/)).toBeTruthy();
-    expect(screen.getByRole('heading', { level: 2 })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: 'Mapa del salón' })).toBeTruthy();
     expect(await sector(/Centro A/)).toBeTruthy();
   });
 
@@ -208,6 +218,44 @@ describe('SedePanel', () => {
       fireEvent.click(screen.getByRole('button', { name: /Centro B/ }));
     });
     expect(llamadas('guardar_preferencias')[1][1]).toEqual({ p_clave: 'SEDE1', p_sectores: [1, 2] });
+  });
+
+  it('muestra las reservas de la sede por sesión y guarda las filas con la sesión y la sede por clave', async () => {
+    const user = userEvent.setup();
+    render(<SedePanel clave="SEDE1" />);
+    const grupo = await screen.findByRole('group', { name: 'Reservas de Domingo 10' });
+    expect((within(grupo).getByLabelText('Cantidad') as HTMLInputElement).value).toBe('6');
+    expect((within(grupo).getByLabelText('Sector') as HTMLSelectElement).value).toBe('Centro A');
+
+    await user.click(screen.getByRole('button', { name: 'Agregar fila a Domingo 17' }));
+    const nuevo = screen.getByRole('group', { name: 'Reservas de Domingo 17' });
+    await user.type(within(nuevo).getByLabelText('Cantidad'), '4');
+    await user.click(screen.getByRole('button', { name: 'Guardar reservas de Domingo 17' }));
+
+    expect(llamadas('guardar_reservas_sede')).toEqual([
+      ['guardar_reservas_sede', { p_clave: 'SEDE1', p_filas: [{ seccion: 'centro', sesion: 'Domingo 17', cantidad: 4 }], p_sesiones: ['Domingo 17'] }],
+    ]);
+    expect(await screen.findByText('Reservas de Domingo 17 guardadas.')).toBeTruthy();
+  });
+
+  it('si el servidor rechaza las reservas muestra el motivo por fila', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockImplementation(async (nombre: string) => {
+      if (nombre === 'obtener_mapa_sede') return mapa;
+      if (nombre === 'obtener_reservas_sede') return RESERVAS;
+      return { success: false, error: 'RESERVAS_INVALIDAS', errores: [{ fila: 1, motivo: 'Excede la capacidad de centro en Domingo 10: 11 > 10' }] };
+    });
+    render(<SedePanel clave="SEDE1" />);
+    await user.click(await screen.findByRole('button', { name: 'Guardar reservas de Domingo 10' }));
+    expect((await screen.findByRole('alert')).textContent).toContain('Fila 1: Excede la capacidad de centro en Domingo 10: 11 > 10');
+  });
+
+  it('con abierto:false las reservas no se pueden editar ni guardar', async () => {
+    mapa = { ...MAPA, abierto: false };
+    render(<SedePanel clave="SEDE1" />);
+    const guardar = (await screen.findByRole('button', { name: 'Guardar reservas de Domingo 10' })) as HTMLButtonElement;
+    expect(guardar.disabled).toBe(true);
+    expect((screen.getByLabelText('Cantidad') as HTMLInputElement).disabled).toBe(true);
   });
 
   it('vuelve a pedir el mapa cada 30 s y deja de hacerlo al desmontar', async () => {

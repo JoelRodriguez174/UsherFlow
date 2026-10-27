@@ -168,7 +168,7 @@ export function ReservasPaso() {
         <h2 id="res-csv" className={CLASE_TITULO}>
           Importar desde Excel o CSV
         </h2>
-        <p className="text-base text-texto-suave">Columnas: sede, seccion, sesion, cantidad y, si querés, sector (vacío = toda la sección). Reemplaza las reservas de las sesiones que aparezcan. En Excel se lee la primera hoja.</p>
+        <p className="text-base text-texto-suave">Columnas: sede, seccion, sesion, cantidad y, si querés, sector (vacío = toda la sección). Reemplaza las reservas de cada sede en las sesiones que aparezcan; las demás sedes no se tocan (para sacar una sede de una sesión, quitala en la tabla). En Excel se lee la primera hoja.</p>
         <div className="flex flex-col gap-1">
           <label htmlFor={idCsv} className="text-base text-texto">
             Archivo Excel o CSV
