@@ -142,8 +142,8 @@ export function SedePanel({ clave }: { clave: string }) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6">
-      <header className="flex flex-col gap-1">
+    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-x-10">
+      <header className="flex flex-col gap-1 lg:col-span-2">
         <h1 className="font-titulo text-3xl text-texto">{mapa.sede.nombre}</h1>
         {!mapa.abierto ? (
           <p className="text-base font-semibold text-peligro">Cerrado</p>
@@ -156,10 +156,12 @@ export function SedePanel({ clave }: { clave: string }) {
         )}
       </header>
 
-      <Aviso mensaje={aviso} tipo="error" onCerrar={() => setAviso(null)} />
+      <div className="lg:col-span-2">
+        <Aviso mensaje={aviso} tipo="error" onCerrar={() => setAviso(null)} />
+      </div>
 
       {!mapa.sesiones.some((s) => s.sectores.some((x) => x.asignado > 0)) && (
-        <p className="text-base text-texto-suave">Todavía no te asignaron lugares.</p>
+        <p className="text-base text-texto-suave lg:col-span-2">Todavía no te asignaron lugares.</p>
       )}
 
       <section aria-labelledby="titulo-mapa" className="flex flex-col gap-3">

@@ -64,7 +64,7 @@ export function MapaSupervisor({ clave, version = 0 }: { clave: string; version?
   });
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-8 lg:max-w-none lg:px-0">
       <h2 className="font-titulo text-xl text-texto">Preferencias por sector</h2>
       <Aviso mensaje={error} tipo="error" onCerrar={() => setError(null)} />
       {mapa === null && error === null && (

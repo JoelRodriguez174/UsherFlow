@@ -50,7 +50,7 @@ export function MapaSalon({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4 rounded-2xl border border-borde bg-superficie p-3">
+    <div className="flex w-full flex-col gap-4 rounded-2xl border border-borde bg-superficie p-3 lg:p-5">
       <div className="mx-auto w-3/5 rounded bg-superficie-alta py-2 text-center text-xs font-bold tracking-[0.3em] text-texto-suave">
         {etiquetaEscenario}
       </div>
@@ -85,7 +85,7 @@ export function MapaSalon({
                       onClick={() => {
                         if (!inactivo) onAlternar?.(s.id);
                       }}
-                      className={`flex min-h-16 min-w-0 flex-col items-center justify-center rounded-lg border-2 px-1 py-2 text-center break-words transition-colors ${clases} ${
+                      className={`flex min-h-16 min-w-0 lg:min-h-20 flex-col items-center justify-center rounded-lg border-2 px-1 py-2 text-center break-words transition-colors ${clases} ${
                         inactivo ? "cursor-default" : "cursor-pointer hover:brightness-110"
                       } ${deshabilitado ? "opacity-60" : ""}`}
                     >

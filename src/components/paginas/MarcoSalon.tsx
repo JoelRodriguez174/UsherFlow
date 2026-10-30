@@ -25,7 +25,7 @@ export function MarcoSalon({ controles, children }: MarcoSalonProps) {
   return (
     <>
       <header className="safe-top border-b border-borde bg-superficie px-4 pb-3">
-        <div className="mx-auto flex w-full max-w-md flex-col gap-2">
+        <div className="mx-auto flex w-full max-w-md flex-col gap-2 lg:max-w-6xl">
           <div className="flex items-center justify-between gap-3">
             <p className="font-titulo text-lg text-texto">UsherFlow</p>
             {controles !== undefined && <div className="flex items-center gap-2">{controles}</div>}

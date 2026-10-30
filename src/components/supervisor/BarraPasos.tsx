@@ -35,16 +35,16 @@ export function BarraPasos({ actual }: { actual: PasoId }) {
   }, [actual]);
 
   return (
-    <nav ref={nav} aria-label="Pasos" className="sticky top-0 z-10 -mx-4 overflow-x-auto bg-fondo px-4 py-2">
-      <ol className="flex gap-2">
+    <nav ref={nav} aria-label="Pasos" className="sticky top-0 z-10 -mx-4 overflow-x-auto bg-fondo px-4 py-2 lg:top-6 lg:mx-0 lg:overflow-visible lg:p-0">
+      <ol className="flex gap-2 lg:flex-col">
         {pasos.map((p, i) => {
           const est = textoEstado(p, estado === 'listo');
           return (
-            <li key={p.id} className="shrink-0">
+            <li key={p.id} className="shrink-0 lg:shrink">
               <Link
                 href={p.ruta}
                 aria-current={p.id === actual ? 'step' : undefined}
-                className={`inline-flex min-h-11 items-center gap-1.5 rounded-2xl border px-3 text-sm ${
+                className={`inline-flex min-h-11 items-center gap-1.5 lg:flex rounded-2xl border px-3 text-sm ${
                   p.id === actual ? 'border-acento bg-superficie-alta font-semibold text-texto' : 'border-borde bg-superficie text-texto-suave'
                 }`}
               >
