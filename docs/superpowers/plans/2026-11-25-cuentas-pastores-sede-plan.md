@@ -22,19 +22,15 @@ Cada fase cierra con: tests pasando (`pgTAP` / `Vitest` / `lint`), revisión de 
 ## Fase 2 — Auth de pastores + 2FA por código de 6 dígitos en servidor
 **Objetivo:** habilitar Supabase Auth para pastores con verificación obligatoria de lista blanca + segundo factor de 6 dígitos por email validado en Postgres.
 
-- [ ] Habilitar `[auth]` e Inbucket/Mailpit en `supabase/config.toml` para pruebas locales.
-- [ ] Instalar `@supabase/ssr` y crear cliente de servidor/middleware para sesiones en cookies `HttpOnly` (`src/lib/supabaseServer.ts`), manteniendo `src/lib/supabase.ts` intacto para ujieres/supervisor.
-- [ ] Migración SQL de sesiones 2FA + RPCs autenticadas:
-  - Tabla `private.pastor_sesion_2fa (user_id uuid, session_id text, verificado_hasta timestamptz, primary key (user_id, session_id))` + helper `private.sede_de_pastor_autenticado()` que exige: JWT válido + email verificado en `public.sede_pastor` + sesión 2FA vigente.
-  - RPCs `obtener_eventos_pastor()`, `obtener_mapa_sede_auth(p_evento_id uuid)` y `guardar_reservas_sede_auth(p_evento_id uuid, p_filas jsonb, p_sesiones text[])` delegando en el mismo núcleo de validación atómica.
-- [ ] Route Handlers en `src/app/api/sede/auth/`:
-  - `iniciar` (verifica email en lista blanca sin revelar datos internos y determina si es primera activación o login con contraseña).
-  - `login` (valida email + contraseña con Supabase Auth y dispara OTP de 6 dígitos al email).
-  - `verificar-codigo` (valida los 6 dígitos con `verifyOtp`, marca la sesión 2FA como verificada en servidor y setea cookies seguras).
-  - `definir-clave` (solo tras verificar código de 6 dígitos en primera activación o recuperación).
-  - `salir` (cierra sesión y revoca el registro 2FA de esa sesión).
-- [ ] Tests pgTAP (`020_auth_pastor_2fa.test.sql`) + tests unitarios de los Route Handlers.
-- [ ] **Checklist de seguridad Fase 2:** cookies `HttpOnly`/`SameSite=Lax`, sin bypass de 2FA llamando RPCs directo con el JWT del paso 1, revocación inmediata al cambiar el email en `sede_pastor`, y límites de intentos/vencimiento del código.
+- [x] Habilitar `[auth]` e Inbucket/Mailpit en `supabase/config.toml` para pruebas locales (`minimum_password_length = 8`, `otp_expiry = 600`).
+- [x] Instalar `@supabase/ssr` y crear cliente de servidor para sesiones en cookies `HttpOnly` (`src/lib/supabaseServer.ts`), manteniendo `src/lib/supabase.ts` intacto para ujieres/supervisor.
+- [x] Migración SQL de sesiones 2FA + RPCs autenticadas (`20261125000200_auth_pastor_2fa.sql`):
+  - Trigger `before insert on auth.users` que bloquea registros fuera de `public.sede_pastor`.
+  - Tabla `private.pastor_sesion_2fa (user_id, session_id, verificado_en, expira_en)` + helper `private.sede_de_pastor_autenticado()` que exige JWT válido + email vigente en `sede_pastor` + sesión 2FA activa.
+  - RPCs `estado_email_pastor`, `confirmar_2fa_pastor` (valida `amr = 'otp'` reciente), `revocar_2fa_pastor`, `obtener_eventos_pastor`, `obtener_mapa_sede_auth` y `guardar_reservas_sede_auth`.
+- [x] Route Handlers en `src/app/api/sede/`: `auth/iniciar`, `auth/login`, `auth/recuperar`, `auth/verificar-codigo`, `auth/definir-clave`, `auth/salir`, `sesion`, `mapa` y `reservas`.
+- [x] Tests pgTAP (`020_auth_pastor_2fa.test.sql`) + tests unitarios (`pastorAuth.test.ts`, `authRoutes.test.ts`).
+- [x] **Checklist de seguridad Fase 2:** cookies `HttpOnly`/`SameSite=Lax`, sin bypass de 2FA llamando RPCs directo con el JWT del paso 1, revocación inmediata al cambiar el email en `sede_pastor`, y límites de intentos/vencimiento del código.
 
 ---
 
