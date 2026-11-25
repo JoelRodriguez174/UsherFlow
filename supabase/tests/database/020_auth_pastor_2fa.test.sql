@@ -22,7 +22,7 @@ create temp table _s as
   select (select id from public.sede where nombre = 'Moreno F2') as moreno,
          (select id from public.sede where nombre = 'Moron F2') as moron;
 
-select public.guardar_email_sede((select ks from _k), (select moreno from _s), 'pastor.moreno@iglesia.org');
+select public.guardar_email_sede((select ks from _k), (select moreno from _s), 'pastor.moreno.f2@iglesia.org');
 
 -- 1. estado_email_pastor antes de activar cuenta
 select is(
@@ -31,7 +31,7 @@ select is(
   'email fuera de lista blanca: autorizado false'
 );
 select is(
-  public.estado_email_pastor('PASTOR.MORENO@IGLESIA.ORG'),
+  public.estado_email_pastor('PASTOR.MORENO.F2@IGLESIA.ORG'),
   '{"autorizado":true,"cuenta_activa":false}'::jsonb,
   'email en lista blanca sin cuenta aún: autorizado true, cuenta_activa false'
 );
@@ -46,10 +46,10 @@ select throws_ok(
 -- 3. Alta permitida para email en sede_pastor
 create temp table _u as select gen_random_uuid() as uid;
 insert into auth.users (id, email, aud, role, email_confirmed_at, encrypted_password)
-values ((select uid from _u), 'pastor.moreno@iglesia.org', 'authenticated', 'authenticated', now(), 'hash-simulado');
+values ((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'authenticated', 'authenticated', now(), 'hash-simulado');
 
 select is(
-  public.estado_email_pastor('pastor.moreno@iglesia.org'),
+  public.estado_email_pastor('pastor.moreno.f2@iglesia.org'),
   '{"autorizado":true,"cuenta_activa":true}'::jsonb,
   'con usuario confirmado y password: cuenta_activa true'
 );
@@ -68,7 +68,7 @@ end;
 $$;
 
 -- 4. Sólo con contraseña (sin OTP): NO puede confirmar 2FA ni leer el mapa
-select pg_temp.set_jwt((select uid from _u), 'pastor.moreno@iglesia.org', 'sess-1',
+select pg_temp.set_jwt((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'sess-1',
   jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint)));
 
 select is(
@@ -88,7 +88,7 @@ select throws_ok(
 );
 
 -- 5. OTP viejo (> 10 min) tampoco sirve para confirmar 2FA
-select pg_temp.set_jwt((select uid from _u), 'pastor.moreno@iglesia.org', 'sess-1',
+select pg_temp.set_jwt((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'sess-1',
   jsonb_build_array(jsonb_build_object('method', 'otp', 'timestamp', extract(epoch from now() - interval '15 minutes')::bigint)));
 
 select is(
@@ -98,7 +98,7 @@ select is(
 );
 
 -- 6. Con OTP reciente: confirma 2FA y habilita lectura + reserva
-select pg_temp.set_jwt((select uid from _u), 'pastor.moreno@iglesia.org', 'sess-1',
+select pg_temp.set_jwt((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'sess-1',
   jsonb_build_array(jsonb_build_object('method', 'otp', 'timestamp', extract(epoch from now())::bigint)));
 
 select is(public.confirmar_2fa_pastor()->>'success', 'true', 'confirmar_2fa_pastor aprueba con OTP reciente');
@@ -124,7 +124,7 @@ select is(
 );
 
 -- 7. Otra sesión distinta (sess-2) del mismo usuario NO hereda el 2FA de sess-1
-select pg_temp.set_jwt((select uid from _u), 'pastor.moreno@iglesia.org', 'sess-2',
+select pg_temp.set_jwt((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'sess-2',
   jsonb_build_array(jsonb_build_object('method', 'password', 'timestamp', extract(epoch from now())::bigint)));
 select throws_ok(
   $$select public.obtener_eventos_pastor()$$,
@@ -133,7 +133,7 @@ select throws_ok(
 );
 
 -- 8. Revocación al salir (revocar_2fa_pastor)
-select pg_temp.set_jwt((select uid from _u), 'pastor.moreno@iglesia.org', 'sess-1',
+select pg_temp.set_jwt((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'sess-1',
   jsonb_build_array(jsonb_build_object('method', 'otp', 'timestamp', extract(epoch from now())::bigint)));
 select is(public.revocar_2fa_pastor()->>'success', 'true', 'revocar_2fa_pastor limpia la sesión');
 select throws_ok(

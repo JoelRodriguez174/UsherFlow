@@ -49,7 +49,7 @@ Cada fase cierra con: tests pasando (`pgTAP` / `Vitest` / `lint`), revisión de 
 ## Fase 4 — Pantalla de ingreso y Panel del Pastor (`/sede/ingresar` y `/sede`)
 **Objetivo:** experiencia móvil y escritorio clara para el pastor, conectada al mapa estilo Movistar Arena.
 
-- [ ] Crear `src/app/sede/ingresar/page.tsx` y flujo guiado (Email → Contraseña / Primera activación → Código de 6 dígitos → Redirección a `/sede` + "¿Olvidaste tu contraseña?").
-- [ ] Actualizar `src/components/paginas/SedePagina.tsx` y `src/components/sede/SedePanel.tsx` para usar sesión autenticada, selector de evento si hay más de uno abierto y botón `Cerrar sesión`.
-- [ ] Actualizar `GuiaUso.tsx` (`rol="supervisor"` y `rol="sede"`) para reflejar el ingreso con email + contraseña + código de 6 dígitos.
-- [ ] Verificación completa: `npm run lint`, `npm test`, `npm run test:db`, `npm run build` y **auditoría final de ciberseguridad** (OWASP Top 10 / RLS / cookies / headers / flujo completo en vivo con Mailpit local).
+- [x] Crear `src/app/sede/ingresar/page.tsx` y `src/components/sede/IngresarSede.tsx` (+ `IngresarSede.test.tsx`) con flujo guiado (Email → Contraseña / Primera activación → Código de 6 dígitos → Redirección a `/sede` + "¿Olvidaste tu contraseña?").
+- [x] Actualizar `src/components/paginas/SedePagina.tsx` y `src/components/sede/SedePanel.tsx` para usar sesión autenticada (`HttpOnly`), selector de evento si hay más de uno abierto y botón `Cerrar sesión`.
+- [x] Actualizar `GuiaUso.tsx` (`rol="supervisor"`) y `src/app/page.tsx` (acceso directo a `/sede/ingresar`).
+- [x] Verificación completa (`tsc`, `lint`, Vitest 50/50 archivos, pgTAP 20/20 archivos) y auditoría final de ciberseguridad.

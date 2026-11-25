@@ -16,7 +16,7 @@ const GUIAS: Record<RolGuia, { titulo: string; subtitulo: string; pasos: PasoGui
     pasos: [
       { titulo: '1. Armá el Salón', detalle: 'Cargá las filas y dividí cada sección en sectores (por ejemplo: Adelante, Medio y Atrás).' },
       { titulo: '2. Cargá las Sesiones', detalle: 'Definí cada reunión con su horario y cuántos minutos antes se liberan las reservas no usadas.' },
-      { titulo: '3. Habilitá las Sedes', detalle: 'Agregá las sedes participantes, fijá la fecha límite y compartí el enlace único a cada pastor.' },
+      { titulo: '3. Autorizá las Sedes', detalle: 'Cargá el email del pastor de cada sede (uno por uno o desde Excel/CSV) y fijá la fecha límite.' },
       { titulo: '4. Revisá las Reservas', detalle: 'Mirá en el mapa qué reservó cada sede o importá una planilla Excel/CSV si necesitás ajustar.' },
       { titulo: '5. Mostrá los QR a los ujieres', detalle: 'Cada ujier escanea el QR de su puesto (Puerta, Izquierda, Centro o Derecha) sin crear cuenta.' },
       { titulo: '6. Hacé la Revisión final', detalle: 'Verificá que todos los pasos estén en verde antes de abrir las puertas del salón.' },

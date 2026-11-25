@@ -1,4 +1,6 @@
-// Inicio público: no expone nada del salón ni pide ninguna clave. El acceso es solo por QR (/entrar).
+import Link from 'next/link';
+
+// Inicio público: no expone nada del salón ni pide ninguna clave. Los ujieres entran por QR (/entrar) y los pastores por /sede/ingresar.
 export default function Inicio() {
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-5 px-4 py-8">
@@ -11,6 +13,15 @@ export default function Inicio() {
       <p className="text-base text-texto-suave">
         ¿El QR no funciona o dice que venció? Pedile al supervisor que te muestre uno nuevo.
       </p>
+      <div className="border-t border-borde pt-4">
+        <p className="text-sm text-texto-suave">¿Sos pastor de una sede?</p>
+        <Link
+          href="/sede/ingresar"
+          className="mt-1 inline-flex min-h-11 items-center text-base font-semibold text-acento hover:underline"
+        >
+          Ingresar para reservar lugares →
+        </Link>
+      </div>
     </main>
   );
 }

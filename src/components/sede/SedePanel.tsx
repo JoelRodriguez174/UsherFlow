@@ -76,7 +76,15 @@ function esEscritorioActual(): boolean {
   return window.matchMedia('(min-width: 1024px)').matches;
 }
 
-export function SedePanel({ clave }: { clave: string }) {
+export function SedePanel({
+  clave,
+  eventoId,
+  onSesionExpirada,
+}: {
+  clave?: string;
+  eventoId?: string;
+  onSesionExpirada?(): void;
+}) {
   const [mapa, setMapa] = useState<Mapa | null>(null);
   const [sesionId, setSesionId] = useState<string | null>(null);
   const [borradores, setBorradores] = useState<Record<string, Record<number, number>>>({});
@@ -95,7 +103,17 @@ export function SedePanel({ clave }: { clave: string }) {
 
   const cargar = useCallback(async () => {
     try {
-      const res = await llamarRpc('obtener_mapa_sede', { p_clave: clave });
+      let res: Record<string, unknown>;
+      if (eventoId) {
+        const http = await fetch(`/api/sede/mapa?eventoId=${encodeURIComponent(eventoId)}`);
+        if (http.status === 401) {
+          onSesionExpirada?.();
+          return;
+        }
+        res = (await http.json()) as Record<string, unknown>;
+      } else {
+        res = await llamarRpc('obtener_mapa_sede', { p_clave: clave ?? '' });
+      }
       if (!res.success) throw new Error(String(res.error));
       if (guardandoRef.current) return;
       const m = res as unknown as Mapa;
@@ -105,7 +123,7 @@ export function SedePanel({ clave }: { clave: string }) {
       if (e instanceof ClaveInvalidaError) setClaveInvalida(true);
       else setFalloCarga(true);
     }
-  }, [clave]);
+  }, [clave, eventoId, onSesionExpirada]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- carga inicial desde el servidor
@@ -241,11 +259,25 @@ export function SedePanel({ clave }: { clave: string }) {
     setMensaje(null);
     const filas = filasParaGuardar(mapa.sectores, sesion.nombre, borrador);
     try {
-      const res = await llamarRpc('guardar_reservas_sede', {
-        p_clave: clave,
-        p_filas: filas,
-        p_sesiones: [sesion.nombre],
-      });
+      let res: Record<string, unknown>;
+      if (eventoId) {
+        const http = await fetch('/api/sede/reservas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ eventoId, filas, sesiones: [sesion.nombre] }),
+        });
+        if (http.status === 401) {
+          onSesionExpirada?.();
+          return;
+        }
+        res = (await http.json()) as Record<string, unknown>;
+      } else {
+        res = await llamarRpc('guardar_reservas_sede', {
+          p_clave: clave ?? '',
+          p_filas: filas,
+          p_sesiones: [sesion.nombre],
+        });
+      }
       if (res.success) {
         setBorradores((prev) => {
           const copia = { ...prev };

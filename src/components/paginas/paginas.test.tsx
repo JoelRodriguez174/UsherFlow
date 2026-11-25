@@ -11,7 +11,7 @@ let contexto: Record<string, unknown>;
 
 vi.mock('@/lib/rpc', () => ({
   llamarRpc: (...a: unknown[]) => llamarRpc(...a),
-  ClaveInvalidaError: class ClaveInvalidaError extends Error {},
+  ClaveInvalidaError: class ClaveInvalidaError extends Error { },
   mensajeDeError: (c: string) => `msg:${c}`,
 }));
 vi.mock('@/lib/acceso', () => ({
@@ -25,6 +25,7 @@ vi.mock('@/state/SalonProvider', () => ({
   useTick: () => 1_000_000,
 }));
 vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND');
   },
@@ -90,12 +91,14 @@ describe('estados comunes', () => {
 });
 
 describe('clave inválida según el rol', () => {
-  it('el pastor de sede no ve "escaneá un QR": se le dice que abra de nuevo el enlace del supervisor', () => {
+  it('el pastor de sede sin sesión ve el acceso a /sede/ingresar en vez de "escaneá un QR"', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ autenticado: false }), { status: 401 })));
     leerAcceso.mockReturnValue(null);
     render(<SedePagina />);
-    expect(screen.getByRole('heading', { name: 'Pedí un QR nuevo' })).toBeTruthy();
+    expect(await screen.findByRole('heading', { name: 'Ingresá con tu cuenta de sede' })).toBeTruthy();
     expect(screen.queryByText(/escanealo|QR actual/i)).toBeNull();
-    expect(screen.getByText(/Abrí de nuevo el enlace que te mandó el supervisor/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ingresar a mi sede' }).getAttribute('href')).toBe('/sede/ingresar');
+    vi.unstubAllGlobals();
   });
 
   it('el ujier sigue viendo la indicación del QR', () => {
