@@ -198,6 +198,9 @@ const MENSAJES: Record<string, string> = {
   FECHA_LIMITE_VENCIDA: 'La fecha límite para confirmar ya venció.',
   SECTOR_INVALIDO: 'Ese sector no es válido para esa sección.',
   SEDE_INVALIDA: 'Esa sede no es válida.',
+  EMAIL_INVALIDO: 'Ese email no parece válido. Revisalo y probá de nuevo.',
+  EMAIL_DUPLICADO: 'Ese email ya está asignado a otra sede.',
+  FILAS_INVALIDAS: 'Hay filas con errores en la planilla. Revisalas y probá de nuevo.',
   ERROR_DE_RED: 'Sin conexión: no se pudo guardar. Se deshizo el cambio.',
 };
 

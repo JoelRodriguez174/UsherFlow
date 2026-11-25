@@ -49,6 +49,53 @@ export function planillaATexto(filas: readonly (readonly unknown[])[]): string {
 
 const clave = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
+export interface FilaEmailSede {
+  sede: string;
+  email: string;
+}
+
+const RE_EMAIL_CSV = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+/** Parsea CSV/Excel (vía `planillaATexto`) con columnas `sede` y `email` (o `correo`). */
+export function parsearEmailsSedesCsv(texto: string): { filas: FilaEmailSede[]; lineas: number[]; errores: ErrorCsv[] } {
+  const lineas = texto.replace(/^\uFEFF/, '').split(/\r?\n/);
+  const encabezado = lineas[0] ?? '';
+  const sep = encabezado.replace(/"[^"]*"/g, '').includes(';') ? ';' : ',';
+  const cols = dividir(encabezado, sep).map(clave);
+  const iSede = cols.indexOf('sede');
+  const iEmail = cols.indexOf('email') >= 0 ? cols.indexOf('email') : cols.indexOf('correo');
+  const faltan: string[] = [];
+  if (iSede < 0) faltan.push('sede');
+  if (iEmail < 0) faltan.push('email');
+  if (faltan.length) {
+    return { filas: [], lineas: [], errores: [{ linea: 1, motivo: `Faltan columnas: ${faltan.join(', ')}` }] };
+  }
+
+  const filas: FilaEmailSede[] = [];
+  const numeros: number[] = [];
+  const errores: ErrorCsv[] = [];
+  lineas.forEach((lineaTexto, i) => {
+    if (i === 0 || !lineaTexto.trim()) return;
+    const linea = i + 1;
+    const c = dividir(lineaTexto, sep);
+    const sede = (c[iSede] ?? '').trim();
+    const email = (c[iEmail] ?? '').trim().toLowerCase();
+    const motivo = !sede
+      ? 'Falta la sede'
+      : !email
+        ? 'Falta el email'
+        : email.length > 254 || !RE_EMAIL_CSV.test(email)
+          ? `Email inválido: ${email}`
+          : null;
+    if (motivo) errores.push({ linea, motivo });
+    else {
+      filas.push({ sede, email });
+      numeros.push(linea);
+    }
+  });
+  return { filas, lineas: numeros, errores };
+}
+
 export function parsearReservasCsv(texto: string): { filas: FilaReserva[]; lineas: number[]; errores: ErrorCsv[] } {
   const lineas = texto.replace(/^\uFEFF/, '').split(/\r?\n/);
   const encabezado = lineas[0] ?? '';

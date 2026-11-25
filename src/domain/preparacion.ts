@@ -105,7 +105,9 @@ function calcularSedes(d: DatosPreparacion) {
       if (limite > Date.parse(s.inicio_at)) avisos.push(`La fecha límite de preferencias es posterior al inicio de ${s.nombre}`);
     }
   }
-  for (const s of d.sedes) if (!s.clave_acceso) avisos.push(`La sede ${s.nombre} no tiene enlace de acceso`);
+  for (const s of d.sedes) {
+    if (!s.email_autorizado) avisos.push(`La sede ${s.nombre} no tiene email autorizado`);
+  }
   d.sedes.forEach((a, i) => {
     for (const b of d.sedes.slice(i + 1)) {
       if (casiIguales(normalizar(a.nombre), normalizar(b.nombre))) avisos.push(`Nombres de sede muy parecidos: ${a.nombre} y ${b.nombre}`);

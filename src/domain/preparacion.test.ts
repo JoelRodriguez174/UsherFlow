@@ -16,8 +16,8 @@ function sector(id: number, seccion: Seccion, desde: number, hasta: number, capa
   return { id, seccion, nombre: `S${id}`, fila_desde: desde, fila_hasta: hasta, capacidad };
 }
 
-function sede(nombre: string, clave: string | null = 'abc'): SedeServidor {
-  return { sede_id: nombre, nombre, clave_acceso: clave, preferencias: [] };
+function sede(nombre: string, email: string | null = 'pastor@iglesia.org'): SedeServidor {
+  return { sede_id: nombre, nombre, clave_acceso: null, email_autorizado: email, cuenta_activa: false, preferencias: [] };
 }
 
 type Sesion = DatosPreparacion['sesiones'][number];
@@ -257,9 +257,9 @@ describe('calcularPasos: avisos que no cambian completo', () => {
     expect(avisos.some((a) => a.includes('Catán'))).toBe(false);
   });
 
-  it('sede sin clave_acceso', () => {
+  it('sede sin email autorizado', () => {
     const p = paso(completo({ sedes: [sede('Catán', null)] }), 'sedes');
-    expect(p.avisos.some((a) => a.includes('Catán') && a.includes('enlace'))).toBe(true);
+    expect(p.avisos.some((a) => a.includes('Catán') && a.includes('email'))).toBe(true);
     expect(p.completo).toBe(true);
   });
 

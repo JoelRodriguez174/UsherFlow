@@ -147,4 +147,11 @@ describe("MapaSalon", () => {
     expect(within(ley).getByText("Quedan pocos")).toBeTruthy();
     expect(within(ley).getByText("Tu reserva")).toBeTruthy();
   });
+
+  it("filtrar por zona muestra solo esa sección en vista ampliada", () => {
+    render(<MapaSalon sectores={sectores} zona="centro" />);
+    expect(screen.getByRole("heading", { name: "Centro" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Izquierda" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Derecha" })).toBeNull();
+  });
 });

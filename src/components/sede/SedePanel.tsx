@@ -13,6 +13,7 @@ import {
 import { mostrarHora } from '@/lib/fechas';
 import { ClaveInvalidaError, llamarRpc, mensajeDeError } from '@/lib/rpc';
 import { MapaSalon, type EstadoSector, type SectorMapa } from '@/components/mapa/MapaSalon';
+import { SelectorZona, type FiltroZona } from '@/components/mapa/SelectorZona';
 import { PantallaClaveInvalida } from '@/components/paginas/PantallaClaveInvalida';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
@@ -47,6 +48,7 @@ type Mensaje = { tipo: 'error' | 'info'; texto: string };
 // shortcut: polling, subir a realtime si hace falta
 const POLLING_MS = 30_000;
 const LEYENDA_RESERVA: EstadoSector[] = ['disponible', 'pocos', 'agotado', 'asignado'];
+const TAG_ZONA: Record<Seccion, string> = { izquierda: 'Izq', centro: 'Centro', derecha: 'Der' };
 
 function textosErrores(res: Record<string, unknown>): string {
   const lista = Array.isArray(res.errores) ? (res.errores as Array<{ fila: number; motivo: string }>) : [];
@@ -80,6 +82,8 @@ export function SedePanel({ clave }: { clave: string }) {
   const [borradores, setBorradores] = useState<Record<string, Record<number, number>>>({});
   const [sectorActivoId, setSectorActivoId] = useState<number | null>(null);
   const [vistaPrevia, setVistaPrevia] = useState<{ sectorId: number; cantidad: number } | null>(null);
+  const [zona, setZona] = useState<FiltroZona>('todas');
+  const [soloDisponibles, setSoloDisponibles] = useState(false);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [cambioPendienteId, setCambioPendienteId] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
@@ -294,8 +298,13 @@ export function SedePanel({ clave }: { clave: string }) {
               className="flex items-center justify-between gap-2 rounded-xl border border-borde bg-fondo px-3 py-2"
             >
               <div className="min-w-0">
-                <p className="font-semibold text-texto">{item.nombre}</p>
-                <p className="text-sm text-texto-suave">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-texto">{item.nombre}</p>
+                  <span className="rounded-full border border-borde bg-superficie-alta px-2 py-0.5 text-[11px] font-semibold text-texto-suave">
+                    {TAG_ZONA[item.seccion]}
+                  </span>
+                </div>
+                <p className="text-sm text-texto-suave tabular-nums">
                   {`${item.cantidad} ${item.cantidad === 1 ? 'lugar' : 'lugares'} · filas ${item.fila_desde}–${item.fila_hasta}`}
                 </p>
               </div>
@@ -340,7 +349,7 @@ export function SedePanel({ clave }: { clave: string }) {
   );
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6 pb-28 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-x-10 lg:pb-8">
+    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6 pb-28 lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1.45fr)_minmax(22rem,1fr)] lg:items-start lg:gap-x-8 lg:pb-8">
       <header className="flex flex-col gap-1 lg:col-span-2">
         <h1 className="font-titulo text-3xl text-texto">{mapa.sede.nombre}</h1>
         {!mapa.abierto ? (
@@ -420,6 +429,21 @@ export function SedePanel({ clave }: { clave: string }) {
             })}
           </div>
         )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SelectorZona valor={zona} onCambiar={setZona} />
+          <button
+            type="button"
+            aria-pressed={soloDisponibles}
+            onClick={() => setSoloDisponibles((v) => !v)}
+            className={`inline-flex min-h-11 items-center rounded-2xl border px-3.5 text-sm font-semibold transition-colors ${
+              soloDisponibles
+                ? 'border-acento bg-acento/15 text-acento'
+                : 'border-borde bg-superficie-alta text-texto-suave hover:text-texto'
+            }`}
+          >
+            Solo disponibles
+          </button>
+        </div>
         <MapaSalon
           sectores={sectoresMapa}
           onAlternar={
@@ -434,12 +458,14 @@ export function SedePanel({ clave }: { clave: string }) {
           etiquetaAsignado="Tu reserva"
           leyenda={LEYENDA_RESERVA}
           permitirAsignado
+          zona={zona}
+          soloDisponibles={soloDisponibles}
         />
         <GuiaUso rol="sede" />
       </section>
 
       {esEscritorio && (
-        <aside className="flex flex-col gap-4" aria-label="Resumen de reservas">
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-6" aria-label="Resumen de reservas">
           {sectorActivo && mapa.abierto && (
             <section
               aria-labelledby="titulo-editor-sector"

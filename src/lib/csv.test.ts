@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parsearReservasCsv, planillaATexto } from './csv';
+import { parsearEmailsSedesCsv, parsearReservasCsv, planillaATexto } from './csv';
 
 describe('parsearReservasCsv', () => {
   it('lee ; con BOM, CRLF, comillas y líneas vacías', () => {
@@ -76,5 +76,22 @@ describe('planillaATexto', () => {
     const { filas, errores } = parsearReservasCsv(texto);
     expect(filas).toEqual([{ sede: 'San Luis; Norte', seccion: 'centro', sesion: 'Domingo "10"', cantidad: 42 }]);
     expect(errores).toEqual([{ linea: 3, motivo: 'Falta la sede' }]);
+  });
+});
+
+describe('parsearEmailsSedesCsv', () => {
+  it('parsea columnas sede y email (o correo), normaliza y reporta errores por línea', () => {
+    const res = parsearEmailsSedesCsv('Sede;Correo\nMoreno; Pastor.Moreno@Gmail.com \n;sin-sede@iglesia.org\nMerlo;invalido');
+    expect(res.filas).toEqual([{ sede: 'Moreno', email: 'pastor.moreno@gmail.com' }]);
+    expect(res.lineas).toEqual([2]);
+    expect(res.errores).toEqual([
+      { linea: 3, motivo: 'Falta la sede' },
+      { linea: 4, motivo: 'Email inválido: invalido' },
+    ]);
+  });
+
+  it('si faltan columnas obligatorias lo informa en línea 1', () => {
+    const res = parsearEmailsSedesCsv('nombre,telefono\nMoreno,123');
+    expect(res.errores).toEqual([{ linea: 1, motivo: 'Faltan columnas: sede, email' }]);
   });
 });

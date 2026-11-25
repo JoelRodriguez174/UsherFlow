@@ -37,12 +37,12 @@ Cada fase cierra con: tests pasando (`pgTAP` / `Vitest` / `lint`), revisión de 
 ## Fase 3 — Panel del Supervisor (`/supervisor/sedes`)
 **Objetivo:** reemplazar enlaces de sede por gestión de emails autorizados + importación Excel/CSV.
 
-- [ ] Lógica pura en `src/lib/csv.ts` (o `src/domain/sedesEmail.ts`) + tests unitarios para parsear y validar planillas `sede, email`.
-- [ ] Actualizar `src/components/supervisor/pasos/SedesPaso.tsx`:
+- [x] Lógica pura en `src/lib/csv.ts` (`parsearEmailsSedesCsv`) + tests unitarios en `src/lib/csv.test.ts` para parsear y validar planillas `sede, email` (o `correo`).
+- [x] Actualizar `src/components/supervisor/pasos/SedesPaso.tsx`:
   - Edición inline del email autorizado por sede + badge (`Sin email`, `Pendiente de activar`, `Cuenta activa`).
-  - Subida de `.xlsx` / `.csv` con vista previa de simulación (sedes nuevas, cambios de email, errores por línea) y botón de confirmación.
-- [ ] Actualizar `src/domain/preparacion.ts` y tests (`SedesPaso.test.tsx`, `preparacion.test.ts`).
-- [ ] **Checklist de seguridad Fase 3:** validación de tamaño/tipo de archivo, sin inyección en nombres/emails, mensajes de error claros sin filtrar internos.
+  - Subida de `.xlsx` / `.csv` (límite 2 MB) con vista previa de simulación (sedes nuevas, cambios de email, errores por línea) y botón de confirmación.
+- [x] Actualizar `src/domain/preparacion.ts`, `src/lib/rpc.ts`, `MapaSupervisor.tsx` y tests (`SedesPaso.test.tsx`, `preparacion.test.ts`).
+- [x] **Checklist de seguridad Fase 3:** validación de tamaño (máx. 2 MB) y formato en cliente + validación atómica en Postgres, mensajes de error claros sin filtrar internos.
 
 ---
 

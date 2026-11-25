@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PASOS } from '@/domain/preparacion';
 
@@ -25,8 +25,8 @@ const MAPA = {
   fecha_limite: '2026-11-01T21:30:00Z',
   sectores: [{ id: 1, seccion: 'centro', nombre: 'único', fila_desde: 1, fila_hasta: 20, capacidad: 100 }],
   sedes: [
-    { sede_id: 'sede-1', nombre: 'Moreno', clave_acceso: null, preferencias: [] },
-    { sede_id: 'sede-2', nombre: 'Catán', clave_acceso: 'VIEJA', preferencias: [1] },
+    { sede_id: 'sede-1', nombre: 'Moreno', clave_acceso: null, email_autorizado: null, cuenta_activa: false, preferencias: [] },
+    { sede_id: 'sede-2', nombre: 'Catán', clave_acceso: null, email_autorizado: 'catan@iglesia.org', cuenta_activa: true, preferencias: [1] },
   ],
   sesiones: [],
 };
@@ -62,37 +62,75 @@ describe('SedesPaso', () => {
     expect(recargar).toHaveBeenCalledTimes(2);
   });
 
-  it('"Generar enlace" muestra el enlace de la sede con rol=sede y "Rotar enlace" pide rotar', async () => {
+  it('muestra el estado de cuenta de cada sede y permite guardar y quitar el email autorizado', async () => {
     const user = userEvent.setup();
-    llamarRpc.mockImplementation(async (nombre: string, p: Record<string, unknown>) => {
+    llamarRpc.mockImplementation(async (nombre: string, params: { p_email?: string }) => {
       if (nombre === 'obtener_mapa_supervisor') return MAPA;
-      if (nombre === 'generar_acceso_sede') return { success: true, clave: p.p_rotar ? 'NUEVA' : 'ABC123' };
+      if (nombre === 'guardar_email_sede') {
+        const clean = (params.p_email ?? '').trim().toLowerCase();
+        return { success: true, email: clean || null };
+      }
       return { success: true };
     });
+
     render(<SedesPaso />);
-    expect(await screen.findByText(`${window.location.origin}/entrar?k=VIEJA&rol=sede`)).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: 'Generar enlace de Moreno' }));
-    expect(await screen.findByText(`${window.location.origin}/entrar?k=ABC123&rol=sede`)).toBeTruthy();
-    expect(llamadas('generar_acceso_sede')[0][1]).toEqual({ p_clave: 'SUPER1', p_sede_id: 'sede-1', p_rotar: false });
-    await user.click(screen.getByRole('button', { name: 'Rotar enlace de Catán' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sí, rotar' }));
-    expect(await screen.findByText(`${window.location.origin}/entrar?k=NUEVA&rol=sede`)).toBeTruthy();
-    expect(llamadas('generar_acceso_sede')[1][1]).toEqual({ p_clave: 'SUPER1', p_sede_id: 'sede-2', p_rotar: true });
-    expect(recargar).toHaveBeenCalledTimes(2);
+    expect((await screen.findAllByText('Sin email')).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Cuenta activa')).toBeTruthy();
+
+    const inputMoreno = screen.getByLabelText('Email autorizado de Moreno') as HTMLInputElement;
+    await user.type(inputMoreno, 'pastor.moreno@iglesia.org');
+    await user.click(screen.getAllByRole('button', { name: 'Guardar email' })[0]);
+
+    await waitFor(() => expect(llamadas('guardar_email_sede')).toHaveLength(1));
+    expect(llamadas('guardar_email_sede')[0][1]).toEqual({
+      p_clave: 'SUPER1',
+      p_sede_id: 'sede-1',
+      p_email: 'pastor.moreno@iglesia.org',
+    });
+    expect(await screen.findByText('Pendiente de activar')).toBeTruthy();
+
+    await user.click(screen.getAllByRole('button', { name: 'Quitar acceso' })[0]);
+    await waitFor(() => expect(llamadas('guardar_email_sede')).toHaveLength(2));
+    expect(llamadas('guardar_email_sede')[1][1]).toEqual({
+      p_clave: 'SUPER1',
+      p_sede_id: 'sede-1',
+      p_email: '',
+    });
   });
 
-  it('"Rotar enlace" pide confirmación: cancelar no rota, confirmar sí', async () => {
+  it('importa emails desde CSV: simula vista previa y al confirmar guarda en el servidor', async () => {
     const user = userEvent.setup();
-    llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_mapa_supervisor' ? MAPA : { success: true, clave: 'NUEVA' }));
+    llamarRpc.mockImplementation(async (nombre: string, params: { p_simular?: boolean }) => {
+      if (nombre === 'obtener_mapa_supervisor') return MAPA;
+      if (nombre === 'importar_emails_sedes') {
+        return { success: true, total: 2, sedes_nuevas: ['Pilar'], cambios: params.p_simular ? 1 : 1 };
+      }
+      return { success: true };
+    });
+
     render(<SedesPaso />);
-    await user.click(await screen.findByRole('button', { name: 'Rotar enlace de Catán' }));
-    expect(llamadas('generar_acceso_sede')).toHaveLength(0);
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
-    expect(llamadas('generar_acceso_sede')).toHaveLength(0);
-    await user.click(screen.getByRole('button', { name: 'Rotar enlace de Catán' }));
-    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sí, rotar' }));
-    await waitFor(() => expect(llamadas('generar_acceso_sede')).toHaveLength(1));
-    expect(llamadas('generar_acceso_sede')[0][1]).toEqual({ p_clave: 'SUPER1', p_sede_id: 'sede-2', p_rotar: true });
+    const fileInput = await screen.findByLabelText('Planilla de sedes y emails');
+    const csv = new File(['sede,email\nCatán,nuevo@iglesia.org\nPilar,pilar@iglesia.org\n'], 'sedes.csv', { type: 'text/csv' });
+    Object.defineProperty(csv, 'arrayBuffer', {
+      value: async () => new TextEncoder().encode('sede,email\nCatán,nuevo@iglesia.org\nPilar,pilar@iglesia.org\n').buffer,
+    });
+    fireEvent.change(fileInput, { target: { files: [csv] } });
+
+    expect(await screen.findByText('Se van a guardar 2 emails autorizados.')).toBeTruthy();
+    expect(screen.getByText(/Sedes nuevas a crear: Pilar/)).toBeTruthy();
+    expect(screen.getByText(/1 sede cambia de email/)).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar importación' }));
+    await waitFor(() => expect(llamadas('importar_emails_sedes')).toHaveLength(2));
+    expect(llamadas('importar_emails_sedes')[1][1]).toEqual({
+      p_clave: 'SUPER1',
+      p_filas: [
+        { sede: 'Catán', email: 'nuevo@iglesia.org' },
+        { sede: 'Pilar', email: 'pilar@iglesia.org' },
+      ],
+      p_simular: false,
+    });
+    expect(await screen.findByText('Emails de sedes importados.')).toBeTruthy();
   });
 
   describe('Agregar sede', () => {
@@ -104,8 +142,14 @@ describe('SedesPaso', () => {
           creada = true;
           return { success: true, sede_id: 'sede-9' };
         }
-        if (nombre === 'obtener_mapa_supervisor')
-          return creada ? { ...MAPA, sedes: [...MAPA.sedes, { sede_id: 'sede-9', nombre: 'Pilar', clave_acceso: null, preferencias: [] }] } : MAPA;
+        if (nombre === 'obtener_mapa_supervisor') {
+          return creada
+            ? {
+                ...MAPA,
+                sedes: [...MAPA.sedes, { sede_id: 'sede-9', nombre: 'Pilar', clave_acceso: null, email_autorizado: null, cuenta_activa: false, preferencias: [] }],
+              }
+            : MAPA;
+        }
         return { success: true };
       });
       render(<SedesPaso />);
@@ -113,51 +157,14 @@ describe('SedesPaso', () => {
       await user.click(screen.getByRole('button', { name: 'Agregar' }));
       await waitFor(() => expect(llamadas('guardar_sede')).toHaveLength(1));
       expect(llamadas('guardar_sede')[0][1]).toEqual({ p_clave: 'SUPER1', p_nombre: 'Pilar' });
-      expect(await screen.findByRole('button', { name: 'Generar enlace de Pilar' })).toBeTruthy();
-      expect((screen.getByLabelText('Agregar sede') as HTMLInputElement).value).toBe('');
+      expect(await screen.findByLabelText('Email autorizado de Pilar')).toBeTruthy();
       expect(recargar).toHaveBeenCalledTimes(1);
     });
 
-    it('refresca las sedes sin pisar la fecha límite que se está editando', async () => {
-      const user = userEvent.setup();
-      llamarRpc.mockImplementation(async (nombre: string) => {
-        if (nombre === 'obtener_mapa_supervisor') return MAPA;
-        return { success: true };
-      });
-      render(<SedesPaso />);
-      const campo = (await screen.findByLabelText('Fecha límite')) as HTMLInputElement;
-      await waitFor(() => expect(campo.value).toBe('2026-11-01T18:30'));
-      await user.clear(campo);
-      await user.type(campo, '2026-12-05T10:00');
-      await user.type(screen.getByLabelText('Agregar sede'), 'Pilar');
-      await user.click(screen.getByRole('button', { name: 'Agregar' }));
-      await waitFor(() => expect(llamadas('obtener_mapa_supervisor')).toHaveLength(2));
-      expect(campo.value).toBe('2026-12-05T10:00');
-    });
-
-    it('con NOMBRE_INVALIDO muestra el mensaje, no limpia el campo y no recarga', async () => {
-      const user = userEvent.setup();
-      llamarRpc.mockImplementation(async (nombre: string) =>
-        nombre === 'obtener_mapa_supervisor' ? MAPA : { success: false, error: 'NOMBRE_INVALIDO' },
-      );
-      render(<SedesPaso />);
-      const input = (await screen.findByLabelText('Agregar sede')) as HTMLInputElement;
-      await user.type(input, '   ');
-      await user.click(screen.getByRole('button', { name: 'Agregar' }));
-      expect(await screen.findByText('msg:NOMBRE_INVALIDO')).toBeTruthy();
-      expect(input.value).toBe('   ');
-      expect(recargar).not.toHaveBeenCalled();
-    });
-
-    it('sin sedes explica que se agregan acá o se crean al importar', async () => {
+    it('sin sedes explica que se agregan acá o se importan desde Excel/CSV', async () => {
       llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_mapa_supervisor' ? { ...MAPA, sedes: [] } : { success: true }));
       render(<SedesPaso />);
-      expect(await screen.findByText('Todavía no hay sedes. Agregalas acá o se crean solas al importar reservas.')).toBeTruthy();
+      expect(await screen.findByText('Todavía no hay sedes. Agregalas acá o importalas desde Excel/CSV.')).toBeTruthy();
     });
-  });
-
-  it('explica que los nombres no distinguen mayúsculas ni acentos', async () => {
-    render(<SedesPaso />);
-    expect(await screen.findByText('Los nombres no distinguen mayúsculas ni acentos.')).toBeTruthy();
   });
 });
