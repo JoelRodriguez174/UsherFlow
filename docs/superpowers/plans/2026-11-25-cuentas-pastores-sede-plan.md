@@ -8,14 +8,14 @@ Cada fase cierra con: tests pasando (`pgTAP` / `Vitest` / `lint`), revisión de 
 ## Fase 1 — Base de datos y lista blanca del supervisor
 **Objetivo:** modelar `public.sede_pastor` y permitir que el supervisor cargue/edite/importe emails autorizados por sede de forma segura.
 
-- [ ] Migración SQL nueva:
-  - Tabla `public.sede_pastor (sede_id uuid primary key references public.sede(id) on delete cascade, email text not null, updated_at timestamptz not null default now())` con índice único sobre `lower(email)` y `check` de formato básico.
+- [x] Migración SQL nueva (`20261125000100_sede_pastor.sql`):
+  - Tabla `public.sede_pastor (sede_id uuid primary key references public.sede(id) on delete cascade, email text not null, updated_at timestamptz not null default now())` con índice único sobre `email` (normalizado en minúsculas) y `check` de formato básico.
   - RLS activado en `sede_pastor` sin acceso directo para `anon`/`authenticated`.
   - RPC `guardar_email_sede(p_clave text, p_sede_id uuid, p_email text)`: valida clave de supervisor, normaliza `lower(trim(p_email))`, permite `null`/vacío para desautorizar, rechaza email duplicado en otra sede (`EMAIL_DUPLICADO`) y registra en `public.registro`.
   - RPC `importar_emails_sedes(p_clave text, p_filas jsonb, p_simular boolean default false)`: acepta `[{sede, email}]`, valida todas las filas atómicamente (formato, duplicados en archivo y en DB, sedes nuevas a crear, sedes que cambian de email) y aplica solo si `p_simular = false`.
   - Extender `obtener_mapa_supervisor(p_clave)` para devolver `email_autorizado` y si ya activó cuenta (`cuenta_activa` booleano).
-- [ ] Test pgTAP (`019_sede_pastor.test.sql`): alta, edición, revocación, duplicados insensibles a mayúsculas, simulación vs confirmación de importación, y rechazo con clave de ujier o acceso directo a la tabla.
-- [ ] **Checklist de seguridad Fase 1:** verificar `revoke all`, `security definer`, `set search_path = ''`, RLS sin políticas permisivas, y que `obtener_mapa_sede` nunca filtre emails de otras sedes.
+- [x] Test pgTAP (`019_sede_pastor.test.sql`): alta, edición, revocación, duplicados insensibles a mayúsculas, simulación vs confirmación de importación, y rechazo con clave de ujier o acceso directo a la tabla.
+- [x] **Checklist de seguridad Fase 1:** verificar `revoke all`, `security definer`, `set search_path = ''`, RLS sin políticas permisivas, y que `obtener_mapa_sede` nunca filtre emails de otras sedes.
 
 ---
 
