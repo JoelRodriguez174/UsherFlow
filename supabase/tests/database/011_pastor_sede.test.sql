@@ -81,8 +81,8 @@ select is((select r->'preferencias' from _x where n = 'm'), '[]'::jsonb, 'sin pr
 select is((select jsonb_array_length(r->'sesiones') from _x where n = 'm'), 2, 'trae las 2 sesiones del evento');
 select is((select r->'sesiones'->0->>'nombre' from _x where n = 'm'), 'Sáb T11', 'sesiones ordenadas por inicio');
 select is((select r->'sesiones'->0->'sectores' from _x where n = 'm'),
-  jsonb_build_array(jsonb_build_object('sector_id', (select c1 from _sec), 'agotado', false, 'asignado', 0),
-                    jsonb_build_object('sector_id', (select c2 from _sec), 'agotado', false, 'asignado', 0)),
+  jsonb_build_array(jsonb_build_object('sector_id', (select c1 from _sec), 'agotado', false, 'asignado', 0, 'capacidad', 30, 'disponibles', 30),
+                    jsonb_build_object('sector_id', (select c2 from _sec), 'agotado', false, 'asignado', 0, 'capacidad', 30, 'disponibles', 30)),
   'cada sesión lista todos los sectores, sin agotar');
 
 -- preferencias propias vs ajenas
@@ -102,14 +102,14 @@ insert into public.reserva (sesion_id, sede_id, seccion, cantidad, sector_id) va
   ((select dom from _ses), (select lomas from _s), 'centro', 29, (select c1 from _sec));
 insert into _x select 'm2', public.obtener_mapa_sede((select catan from _c));
 select is((select r->'sesiones'->0->'sectores' from _x where n = 'm2'),
-  jsonb_build_array(jsonb_build_object('sector_id', (select c1 from _sec), 'agotado', true, 'asignado', 0),
-                    jsonb_build_object('sector_id', (select c2 from _sec), 'agotado', false, 'asignado', 5)),
+  jsonb_build_array(jsonb_build_object('sector_id', (select c1 from _sec), 'agotado', true, 'asignado', 0, 'capacidad', 30, 'disponibles', 0),
+                    jsonb_build_object('sector_id', (select c2 from _sec), 'agotado', false, 'asignado', 5, 'capacidad', 30, 'disponibles', 30)),
   'C1 agotado por otra sede: agotado true y asignado 0 para Catán; C2 asignado 5');
 select is((select r->'sesiones'->1->'sectores'->0 from _x where n = 'm2'),
-  jsonb_build_object('sector_id', (select c1 from _sec), 'agotado', false, 'asignado', 0),
+  jsonb_build_object('sector_id', (select c1 from _sec), 'agotado', false, 'asignado', 0, 'capacidad', 30, 'disponibles', 1),
   'agotado es por sesión: 29 de 30 en Dom no está agotado');
 select is((select array_agg(distinct k order by k) from _x, jsonb_array_elements(r->'sesiones') s, jsonb_array_elements(s->'sectores') e, jsonb_object_keys(e) k where n = 'm2'),
-  array['agotado', 'asignado', 'sector_id'], 'por sector sólo sector_id, agotado y asignado');
+  array['agotado', 'asignado', 'capacidad', 'disponibles', 'sector_id'], 'por sector sólo sector_id, agotado, asignado, capacidad y disponibles');
 select is((select array_agg(k order by k) from _x, jsonb_object_keys(r) k where n = 'm2'),
   array['abierto', 'fecha_limite', 'preferencias', 'sectores', 'sede', 'sesiones', 'success'], 'el mapa tiene sólo las claves esperadas');
 select is((select array_agg(k order by k) from _x, jsonb_array_elements(r->'sesiones') s, jsonb_object_keys(s) k where n = 'm2' and s->>'nombre' = 'Sáb T11'),

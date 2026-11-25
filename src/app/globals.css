@@ -95,6 +95,55 @@ button,
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }
 
+/* Desplegables <details> con apertura/cierre fluido en navegadores modernos */
+details.desplegable-fluido {
+  interpolate-size: allow-keywords;
+}
+
+details.desplegable-fluido::details-content {
+  display: block;
+  block-size: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    block-size 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 200ms ease-out,
+    content-visibility 260ms allow-discrete;
+}
+
+details.desplegable-fluido[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+
+@keyframes modal-fondo-entrar {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-panel-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.anim-modal-fondo {
+  animation: modal-fondo-entrar 180ms ease-out both;
+}
+
+.anim-modal-panel {
+  animation: modal-panel-entrar 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -6,6 +6,7 @@ import { SECCIONES } from '@/domain/types';
 import { useAjusteBooleano } from '@/lib/ajustes';
 import { SalonProvider, useSalon } from '@/state/SalonProvider';
 import { PuertaView } from '@/components/puerta/PuertaView';
+import { BotonGuiaUso } from '@/components/ui/GuiaUso';
 import { ControlSonido } from './ControlSonido';
 import { MarcoSalon } from './MarcoSalon';
 
@@ -51,6 +52,7 @@ function PuertaContenido() {
         <>
           <ControlModoPico activo={modoPico} onCambiar={setModoPico} />
           <ControlSonido />
+          <BotonGuiaUso rol="puerta" />
         </>
       }
     >

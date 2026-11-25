@@ -44,8 +44,10 @@ export function BarraPasos({ actual }: { actual: PasoId }) {
               <Link
                 href={p.ruta}
                 aria-current={p.id === actual ? 'step' : undefined}
-                className={`inline-flex min-h-11 items-center gap-1.5 lg:flex rounded-2xl border px-3 text-sm ${
-                  p.id === actual ? 'border-acento bg-superficie-alta font-semibold text-texto' : 'border-borde bg-superficie text-texto-suave'
+                className={`inline-flex min-h-11 items-center gap-2 lg:flex rounded-2xl border px-3.5 text-sm transition-colors ${
+                  p.id === actual
+                    ? 'border-acento bg-superficie-alta font-semibold text-texto shadow-sm'
+                    : 'border-borde bg-superficie text-texto-suave hover:border-texto-suave/60 hover:text-texto'
                 }`}
               >
                 <IconoEstado estado={est} />

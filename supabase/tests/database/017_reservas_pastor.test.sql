@@ -1,6 +1,6 @@
 -- El pastor carga las reservas de su sede (guardar_reservas_sede / obtener_reservas_sede) y el Excel ya no pisa a las otras sedes.
 begin;
-select plan(17);
+select plan(18);
 
 select has_function('public', 'guardar_reservas_sede', array['text', 'jsonb', 'text[]'], 'existe guardar_reservas_sede');
 select has_function('public', 'obtener_reservas_sede', array['text'], 'existe obtener_reservas_sede');
@@ -29,12 +29,12 @@ select public.importar_reservas((select sa from _k),
 select is(public.guardar_reservas_sede((select catan from _c),
   '[{"seccion":"centro","sesion":"Sab T17","cantidad":5}]'::jsonb, '{"Sab T17"}'),
   '{"success":true,"sedes_nuevas":[],"reservas":1}'::jsonb, 'el pastor guarda su reserva');
-select is(public.obtener_reservas_sede((select catan from _c))->'sesiones'->1->'reservas',
+select is(public.obtener_reservas_sede((select catan from _c))->'sesiones'->0->'reservas',
   '[{"seccion":"centro","cantidad":5}]'::jsonb, 'el pastor ve lo suyo');
-select is(public.obtener_reservas_sede((select catan from _c))->'sesiones'->0->'reservas', '[]'::jsonb, 'y la otra sesión vacía');
+select is(public.obtener_reservas_sede((select catan from _c))->'sesiones'->1->'reservas', '[]'::jsonb, 'y la otra sesión vacía');
 select is((select count(*)::int from public.reserva where sede_id = (select lomas from _s)), 1, 'la reserva de Lomas sigue');
 select is((select jsonb_agg(r->>'sede' order by r->>'sede')
-             from jsonb_array_elements(public.obtener_reservas((select sa from _k))->'sesiones'->1->'reservas') r),
+             from jsonb_array_elements(public.obtener_reservas((select sa from _k))->'sesiones'->0->'reservas') r),
   '["Catan T17", "Lomas T17"]'::jsonb, 'el supervisor ve las reservas de las dos sedes');
 
 -- El nombre de sede de las filas se ignora: no puede escribir en otra sede.

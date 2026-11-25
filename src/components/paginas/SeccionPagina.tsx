@@ -5,6 +5,7 @@ import type { Seccion } from '@/domain/types';
 import { ahoraServidor } from '@/domain/pendientes';
 import { SalonProvider, useSalon, useTick } from '@/state/SalonProvider';
 import { SeccionView } from '@/components/seccion/SeccionView';
+import { BotonGuiaUso } from '@/components/ui/GuiaUso';
 import { ControlSonido } from './ControlSonido';
 import { MarcoSalon } from './MarcoSalon';
 
@@ -46,7 +47,14 @@ function SeccionContenido({ seccion }: { seccion: Seccion }) {
   }, [cargando, pendientes]);
 
   return (
-    <MarcoSalon controles={<ControlSonido />}>
+    <MarcoSalon
+      controles={
+        <>
+          <ControlSonido />
+          <BotonGuiaUso rol="seccion" />
+        </>
+      }
+    >
       <SeccionView
         seccion={seccion}
         filas={filas}

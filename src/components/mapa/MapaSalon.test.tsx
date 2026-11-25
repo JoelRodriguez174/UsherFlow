@@ -118,4 +118,33 @@ describe("MapaSalon", () => {
     expect(boton(1).classList.contains("text-texto")).toBe(true);
     expect(boton(1).classList.contains("text-texto-suave")).toBe(false);
   });
+
+  it("en modo reserva permite tocar sectores asignados y pocos, y personaliza leyenda y etiquetaAsignado", async () => {
+    const onAlternar = vi.fn();
+    const lista: SectorMapa[] = [
+      { id: 1, seccion: "izquierda", nombre: "adelante", filaDesde: 1, filaHasta: 4, estado: "pocos", detalle: "Quedan 2", capacidad: 20, libres: 2 },
+      { id: 2, seccion: "centro", nombre: "medio", filaDesde: 5, filaHasta: 12, estado: "asignado", detalle: "10 lugares", capacidad: 30, libres: 20, seleccionado: true, sinConfirmar: true },
+    ];
+    render(
+      <MapaSalon
+        sectores={lista}
+        onAlternar={onAlternar}
+        permitirAsignado
+        etiquetaAsignado="Tu reserva"
+        leyenda={["disponible", "pocos", "agotado", "asignado"]}
+      />,
+    );
+    const b1 = screen.getByRole("button", { name: /adelante/ });
+    const b2 = screen.getByRole("button", { name: /medio/ });
+    expect(b1.textContent).toContain("Quedan pocos");
+    expect(b2.textContent).toContain("Tu reserva · sin confirmar");
+    expect(b2.getAttribute("aria-pressed")).toBe("true");
+    await userEvent.click(b1);
+    await userEvent.click(b2);
+    expect(onAlternar).toHaveBeenNthCalledWith(1, 1);
+    expect(onAlternar).toHaveBeenNthCalledWith(2, 2);
+    const ley = screen.getByRole("list", { name: "Leyenda" });
+    expect(within(ley).getByText("Quedan pocos")).toBeTruthy();
+    expect(within(ley).getByText("Tu reserva")).toBeTruthy();
+  });
 });

@@ -60,6 +60,8 @@ export function MapaSupervisor({ clave, version = 0 }: { clave: string; version?
       filaHasta: s.fila_hasta,
       estado: asignado > 0 ? 'asignado' : piden.length > 0 ? 'preferido' : 'disponible',
       detalle: `${piden.length > 0 ? `Piden: ${piden.join(', ')}` : 'Sin pedidos'} · Asignado: ${asignado}/${s.capacidad}`,
+      capacidad: s.capacidad,
+      libres: Math.max(0, s.capacidad - asignado),
     };
   });
 

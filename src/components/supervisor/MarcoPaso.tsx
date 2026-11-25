@@ -62,7 +62,15 @@ export function MarcoPaso({ paso: id, children }: { paso: PasoId; children: Reac
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-6 lg:grid lg:max-w-6xl lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-x-10 lg:pt-6">
       <BarraPasos actual={id} />
-      <div className="flex min-w-0 flex-col gap-4 lg:max-w-3xl">{cuerpo}</div>
+      <div className="flex min-w-0 flex-col gap-4 lg:max-w-3xl">
+        <Link
+          href="/supervisor"
+          className="inline-flex min-h-11 w-fit items-center gap-1.5 text-sm font-semibold text-texto-suave transition-colors hover:text-acento"
+        >
+          ← Todos los pasos
+        </Link>
+        {cuerpo}
+      </div>
     </main>
   );
 }

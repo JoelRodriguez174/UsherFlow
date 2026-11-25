@@ -106,7 +106,7 @@ export function Modal({ abierto, onCerrar, titulo, children }: ModalProps) {
   return createPortal(
     <div
       data-testid="modal-fondo"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-fondo/80 sm:items-center sm:p-4"
+      className="anim-modal-fondo fixed inset-0 z-50 flex items-end justify-center bg-fondo/80 sm:items-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) onCerrar();
       }}
@@ -117,7 +117,7 @@ export function Modal({ abierto, onCerrar, titulo, children }: ModalProps) {
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col rounded-t-3xl border border-borde bg-superficie shadow-2xl sm:rounded-3xl"
+        className="anim-modal-panel flex max-h-[90dvh] w-full max-w-lg flex-col rounded-t-3xl border border-borde bg-superficie shadow-2xl sm:rounded-3xl"
       >
         <div className="flex items-center justify-between gap-3 border-b border-borde px-5 py-3">
           <h2 id={idTitulo} className="font-titulo text-xl font-semibold text-texto">

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const llamarRpc = vi.fn();
@@ -31,8 +31,9 @@ const MAPA = {
       nombre: 'Domingo 10',
       inicio_at: '2026-10-25T13:00:00Z',
       sectores: [
-        { sector_id: 2, agotado: true, asignado: 0 },
-        { sector_id: 3, agotado: false, asignado: 4 },
+        { sector_id: 1, agotado: false, asignado: 0, capacidad: 20, disponibles: 18 },
+        { sector_id: 2, agotado: true, asignado: 0, capacidad: 20, disponibles: 0 },
+        { sector_id: 3, agotado: false, asignado: 4, capacidad: 20, disponibles: 14 },
       ],
     },
     {
@@ -40,22 +41,15 @@ const MAPA = {
       nombre: 'Domingo 17',
       inicio_at: '2026-11-01T13:00:00Z',
       sectores: [
-        { sector_id: 2, agotado: false, asignado: 0 },
-        { sector_id: 3, agotado: true, asignado: 0 },
+        { sector_id: 1, agotado: false, asignado: 0, capacidad: 20, disponibles: 3 },
+        { sector_id: 2, agotado: false, asignado: 0, capacidad: 20, disponibles: 12 },
+        { sector_id: 3, agotado: true, asignado: 0, capacidad: 20, disponibles: 0 },
       ],
     },
   ],
 };
 
-const RESERVAS = {
-  success: true,
-  sesiones: [
-    { id: 's1', nombre: 'Domingo 10', reservas: [{ seccion: 'centro', cantidad: 6, sector: 'Centro A' }] },
-    { id: 's2', nombre: 'Domingo 17', reservas: [] },
-  ],
-};
-
-let mapa: Record<string, unknown>;
+let mapa: typeof MAPA;
 
 function llamadas(nombre: string) {
   return llamarRpc.mock.calls.filter((c) => c[0] === nombre);
@@ -63,88 +57,143 @@ function llamadas(nombre: string) {
 const sector = (nombre: RegExp) => screen.findByRole('button', { name: nombre });
 
 beforeEach(() => {
-  mapa = MAPA;
+  mapa = structuredClone(MAPA);
   llamarRpc.mockReset();
-  llamarRpc.mockImplementation(async (nombre: string, params: { p_sectores?: number[] }) => {
+  llamarRpc.mockImplementation(async (nombre: string) => {
     if (nombre === 'obtener_mapa_sede') return mapa;
-    if (nombre === 'obtener_reservas_sede') return RESERVAS;
     if (nombre === 'guardar_reservas_sede') return { success: true };
-    mapa = { ...mapa, preferencias: params.p_sectores ?? [] }; // como el servidor: lo guardado vuelve en el siguiente mapa
     return { success: true };
   });
 });
+
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
 });
 
 describe('SedePanel', () => {
-  it('pide el mapa con la clave y muestra la sede, la fecha límite y el mapa bajo un h2', async () => {
+  it('pide el mapa con la clave y muestra la sede, la fecha límite y los disponibles por sector', async () => {
     render(<SedePanel clave="SEDE1" />);
     expect((await screen.findByRole('heading', { level: 1 })).textContent).toBe('Moreno');
     expect(llamarRpc).toHaveBeenCalledWith('obtener_mapa_sede', { p_clave: 'SEDE1' });
-    expect(screen.getByText(/Podés cambiar tu preferencia hasta el .*18:00/)).toBeTruthy();
+    expect(screen.getByText(/Podés reservar o cambiar tus lugares hasta el .*18:00/)).toBeTruthy();
     expect(screen.getByRole('heading', { level: 2, name: 'Mapa del salón' })).toBeTruthy();
-    expect(await sector(/Centro A/)).toBeTruthy();
+    expect((await sector(/Centro A/)).textContent).toContain('18 libres');
+    expect(screen.getByRole('button', { name: /Centro B/ }).textContent).toContain('Agotado');
+    expect(screen.getByRole('button', { name: /Izquierda A/ }).textContent).toContain('4 lugares');
   });
 
-  it('clic en un sector guarda la lista nueva y lo marca como preferido', async () => {
+  it('tocar un sector abre el editor, aplica al borrador y confirmar guarda la sesión en guardar_reservas_sede', async () => {
     const user = userEvent.setup();
     render(<SedePanel clave="SEDE1" />);
-    await user.click(await sector(/Centro A/));
-    expect(llamadas('guardar_preferencias')).toEqual([['guardar_preferencias', { p_clave: 'SEDE1', p_sectores: [1] }]]);
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('true');
 
+    await user.click(await sector(/Centro A/));
+    const dialogo = screen.getByRole('dialog', { name: 'Centro A' });
+    const input = within(dialogo).getByLabelText('Cantidad de lugares') as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, '6');
+    await user.click(within(dialogo).getByRole('button', { name: 'Aplicar 6 lugares' }));
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('6 lugares');
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('sin confirmar');
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(llamadas('guardar_reservas_sede')).toEqual([
+      [
+        'guardar_reservas_sede',
+        {
+          p_clave: 'SEDE1',
+          p_filas: [
+            { seccion: 'centro', sesion: 'Domingo 10', cantidad: 6, sector: 'Centro A' },
+            { seccion: 'izquierda', sesion: 'Domingo 10', cantidad: 4, sector: 'Izquierda A' },
+          ],
+          p_sesiones: ['Domingo 10'],
+        },
+      ],
+    ]);
+    expect(await screen.findByText('Reservas de Domingo 10 guardadas.')).toBeTruthy();
+  });
+
+  it('permite quitar una reserva existente desde el editor y guardar solo lo que queda', async () => {
+    const user = userEvent.setup();
+    render(<SedePanel clave="SEDE1" />);
+
+    await user.click(await sector(/Izquierda A/));
+    const dialogo = screen.getByRole('dialog', { name: 'Izquierda A' });
+    await user.click(within(dialogo).getByRole('button', { name: 'Quitar reserva' }));
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+    expect(llamadas('guardar_reservas_sede')).toEqual([
+      ['guardar_reservas_sede', { p_clave: 'SEDE1', p_filas: [], p_sesiones: ['Domingo 10'] }],
+    ]);
+  });
+
+  it('si el servidor rechaza por RESERVAS_INVALIDAS avisa el motivo, refresca y conserva el borrador', async () => {
+    const user = userEvent.setup();
+    llamarRpc.mockImplementation(async (nombre: string) => {
+      if (nombre === 'obtener_mapa_sede') return mapa;
+      return {
+        success: false,
+        error: 'RESERVAS_INVALIDAS',
+        errores: [{ fila: 1, motivo: 'Excede la capacidad del sector Centro A en Domingo 10: 21 > 20' }],
+      };
+    });
+
+    render(<SedePanel clave="SEDE1" />);
+    await user.click(await sector(/Centro A/));
+    const dialogo = screen.getByRole('dialog', { name: 'Centro A' });
+    await user.click(within(dialogo).getByRole('button', { name: 'Aplicar 1 lugar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Fila 1: Excede la capacidad del sector Centro A en Domingo 10: 21 > 20',
+    );
+    expect(llamadas('obtener_mapa_sede')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('1 lugar');
+  });
+
+  it('avisa antes de cambiar de sesión si hay cambios sin confirmar y permite descartarlos', async () => {
+    const user = userEvent.setup();
+    render(<SedePanel clave="SEDE1" />);
+
+    await user.click(await sector(/Centro A/));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Aplicar 1 lugar' }));
+
+    await user.click(screen.getByRole('button', { name: 'Domingo 17' }));
+    expect(screen.getByText('Tenés cambios sin confirmar en Domingo 10.')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', { name: 'Descartar y cambiar' }));
+    expect(screen.getByRole('button', { name: 'Domingo 17' }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('Quedan 3');
+    expect(screen.getByRole('button', { name: /Centro B/ }).textContent).toContain('12 libres');
+  });
+
+  it('con abierto:false muestra Cerrado y no abre el editor al tocar un sector', async () => {
+    const user = userEvent.setup();
+    mapa = { ...MAPA, abierto: false };
+    render(<SedePanel clave="SEDE1" />);
+
+    expect(await screen.findByText('Cerrado')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Centro A/ }));
-    expect(llamadas('guardar_preferencias')[1][1]).toEqual({ p_clave: 'SEDE1', p_sectores: [] });
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('false');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('si el guardado falla revierte y avisa', async () => {
-    const user = userEvent.setup();
-    llamarRpc.mockImplementation(async (nombre: string) => {
-      if (nombre === 'obtener_mapa_sede') return mapa;
-      return { success: false, error: 'SECTOR_INVALIDO' };
-    });
-    render(<SedePanel clave="SEDE1" />);
-    await user.click(await sector(/Centro A/));
-    expect((await screen.findByRole('alert')).textContent).toContain('msg:SECTOR_INVALIDO');
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('si falla la red revierte y avisa', async () => {
-    const user = userEvent.setup();
-    llamarRpc.mockImplementation(async (nombre: string) => {
-      if (nombre === 'obtener_mapa_sede') return mapa;
-      throw new Error('red');
-    });
-    render(<SedePanel clave="SEDE1" />);
-    await user.click(await sector(/Centro A/));
-    expect((await screen.findByRole('alert')).textContent).toContain('msg:ERROR_DE_RED');
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('FECHA_LIMITE_VENCIDA revierte, refresca y muestra Cerrado', async () => {
+  it('FECHA_LIMITE_VENCIDA pasa a Cerrado y refresca el mapa', async () => {
     const user = userEvent.setup();
     llamarRpc.mockImplementation(async (nombre: string) => {
       if (nombre === 'obtener_mapa_sede') return mapa;
       mapa = { ...MAPA, abierto: false };
       return { success: false, error: 'FECHA_LIMITE_VENCIDA' };
     });
+
     render(<SedePanel clave="SEDE1" />);
     await user.click(await sector(/Centro A/));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Aplicar 1 lugar' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
     expect(await screen.findByText('Cerrado')).toBeTruthy();
     expect(llamadas('obtener_mapa_sede')).toHaveLength(2);
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('false');
-  });
-
-  it('con abierto:false muestra Cerrado y no guarda al tocar un sector', async () => {
-    const user = userEvent.setup();
-    mapa = { ...MAPA, abierto: false };
-    render(<SedePanel clave="SEDE1" />);
-    expect(await screen.findByText('Cerrado')).toBeTruthy();
-    await user.click(screen.getByRole('button', { name: /Centro A/ }));
-    expect(llamadas('guardar_preferencias')).toHaveLength(0);
   });
 
   it('sin sectores muestra el mensaje vacío', async () => {
@@ -153,122 +202,42 @@ describe('SedePanel', () => {
     expect(await screen.findByText(/todavía no definió los sectores/)).toBeTruthy();
   });
 
-  it('cambiar de sesión actualiza agotado y asignado', async () => {
-    const user = userEvent.setup();
-    render(<SedePanel clave="SEDE1" />);
-    const centroB = await sector(/Centro B/);
-    expect(centroB.textContent).toContain('Agotado');
-    const izquierda = screen.getByRole('button', { name: /Izquierda A/ });
-    expect(izquierda.textContent).toContain('Tenés 4 lugares');
-    expect(izquierda.textContent).toContain('Asignado');
-
-    await user.click(screen.getByRole('button', { name: 'Domingo 17' }));
-    expect(screen.getByRole('button', { name: /Centro B/ }).textContent).toContain('Disponible');
-    expect(screen.getByRole('button', { name: /Izquierda A/ }).textContent).toContain('Agotado');
-    expect(screen.getByRole('button', { name: 'Domingo 17' }).getAttribute('aria-pressed')).toBe('true');
-  });
-
-  it('sin ninguna asignación en ninguna sesión avisa "Todavía no te asignaron lugares." y deja el mapa; con alguna no lo dice', async () => {
-    mapa = { ...MAPA, sesiones: MAPA.sesiones.map((s) => ({ ...s, sectores: s.sectores.map((x) => ({ ...x, asignado: 0 })) })) };
-    const { unmount } = render(<SedePanel clave="SEDE1" />);
-    expect(await screen.findByText('Todavía no te asignaron lugares.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /Centro A/ })).toBeTruthy();
-    unmount();
-    mapa = MAPA;
-    render(<SedePanel clave="SEDE1" />);
-    await sector(/Centro A/);
-    expect(screen.queryByText('Todavía no te asignaron lugares.')).toBeNull();
-  });
-
   it('CLAVE_INVALIDA muestra la pantalla de clave inválida', async () => {
     llamarRpc.mockRejectedValue(new ClaveInvalidaError());
     render(<SedePanel clave="VIEJA" />);
     expect(await screen.findByRole('heading', { name: 'Pedí un QR nuevo' })).toBeTruthy();
-    expect(screen.getByText(/Abrí de nuevo el enlace/)).toBeTruthy();
   });
 
-  it('un sondeo que responde con un guardado pendiente no revierte la marca y el toque siguiente manda la lista completa', async () => {
+  it('si falla el polling con mapa ya cargado avisa discretamente sin perder el mapa', async () => {
     vi.useFakeTimers();
-    let confirmar!: (r: { success: true }) => void;
-    llamarRpc.mockImplementation((nombre: string) => {
-      if (nombre === 'obtener_mapa_sede') return Promise.resolve(mapa); // el servidor aún no vio el guardado
-      return new Promise((resolver) => {
-        confirmar = resolver;
-      });
+    let veces = 0;
+    llamarRpc.mockImplementation(async () => {
+      veces += 1;
+      if (veces === 1) return mapa;
+      throw new Error('sin red');
     });
+
     render(<SedePanel clave="SEDE1" />);
     await act(async () => {});
-    fireEvent.click(screen.getByRole('button', { name: /Centro A/ }));
+    expect(screen.getByRole('button', { name: /Centro A/ })).toBeTruthy();
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(30_000); // sondeo con preferencias viejas mientras el guardado sigue pendiente
-    });
-    expect(llamadas('obtener_mapa_sede').length).toBeGreaterThan(1);
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('true');
-
-    mapa = { ...MAPA, preferencias: [1] };
-    await act(async () => {
-      confirmar({ success: true });
-    });
-    expect(screen.getByRole('button', { name: /Centro A/ }).getAttribute('aria-pressed')).toBe('true');
-
-    llamarRpc.mockImplementation(async (nombre: string) => (nombre === 'obtener_mapa_sede' ? mapa : { success: true }));
-    fireEvent.click(screen.getByRole('button', { name: 'Domingo 17' })); // Centro B está agotado en la primera sesión
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Centro B/ }));
-    });
-    expect(llamadas('guardar_preferencias')[1][1]).toEqual({ p_clave: 'SEDE1', p_sectores: [1, 2] });
-  });
-
-  it('muestra las reservas de la sede por sesión y guarda las filas con la sesión y la sede por clave', async () => {
-    const user = userEvent.setup();
-    render(<SedePanel clave="SEDE1" />);
-    const grupo = await screen.findByRole('group', { name: 'Reservas de Domingo 10' });
-    expect((within(grupo).getByLabelText('Cantidad') as HTMLInputElement).value).toBe('6');
-    expect((within(grupo).getByLabelText('Sector') as HTMLSelectElement).value).toBe('Centro A');
-
-    await user.click(screen.getByRole('button', { name: 'Agregar fila a Domingo 17' }));
-    const nuevo = screen.getByRole('group', { name: 'Reservas de Domingo 17' });
-    await user.type(within(nuevo).getByLabelText('Cantidad'), '4');
-    await user.click(screen.getByRole('button', { name: 'Guardar reservas de Domingo 17' }));
-
-    expect(llamadas('guardar_reservas_sede')).toEqual([
-      ['guardar_reservas_sede', { p_clave: 'SEDE1', p_filas: [{ seccion: 'centro', sesion: 'Domingo 17', cantidad: 4 }], p_sesiones: ['Domingo 17'] }],
-    ]);
-    expect(await screen.findByText('Reservas de Domingo 17 guardadas.')).toBeTruthy();
-  });
-
-  it('si el servidor rechaza las reservas muestra el motivo por fila', async () => {
-    const user = userEvent.setup();
-    llamarRpc.mockImplementation(async (nombre: string) => {
-      if (nombre === 'obtener_mapa_sede') return mapa;
-      if (nombre === 'obtener_reservas_sede') return RESERVAS;
-      return { success: false, error: 'RESERVAS_INVALIDAS', errores: [{ fila: 1, motivo: 'Excede la capacidad de centro en Domingo 10: 11 > 10' }] };
-    });
-    render(<SedePanel clave="SEDE1" />);
-    await user.click(await screen.findByRole('button', { name: 'Guardar reservas de Domingo 10' }));
-    expect((await screen.findByRole('alert')).textContent).toContain('Fila 1: Excede la capacidad de centro en Domingo 10: 11 > 10');
-  });
-
-  it('con abierto:false las reservas no se pueden editar ni guardar', async () => {
-    mapa = { ...MAPA, abierto: false };
-    render(<SedePanel clave="SEDE1" />);
-    const guardar = (await screen.findByRole('button', { name: 'Guardar reservas de Domingo 10' })) as HTMLButtonElement;
-    expect(guardar.disabled).toBe(true);
-    expect((screen.getByLabelText('Cantidad') as HTMLInputElement).disabled).toBe(true);
-  });
-
-  it('vuelve a pedir el mapa cada 30 s y deja de hacerlo al desmontar', async () => {
-    vi.useFakeTimers();
-    const { unmount } = render(<SedePanel clave="SEDE1" />);
-    await act(async () => {});
-    expect(llamadas('obtener_mapa_sede')).toHaveLength(1);
     await act(async () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
-    expect(llamadas('obtener_mapa_sede')).toHaveLength(2);
-    unmount();
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(llamadas('obtener_mapa_sede')).toHaveLength(2);
+    expect(screen.getByText(/No pudimos actualizar la disponibilidad/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Centro A/ })).toBeTruthy();
+  });
+
+  it('sincroniza el relleno del mapa en vivo al sumar/restar en el editor y revierte al cancelar', async () => {
+    const user = userEvent.setup();
+    render(<SedePanel clave="SEDE1" />);
+
+    await user.click(await sector(/Centro A/));
+    const dialogo = screen.getByRole('dialog', { name: 'Centro A' });
+    await user.click(within(dialogo).getByRole('button', { name: 'Sumar 1 lugar' }));
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('2 lugares');
+
+    await user.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('18 libres');
   });
 });
