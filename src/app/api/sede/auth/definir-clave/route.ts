@@ -35,5 +35,7 @@ export async function POST(req: Request) {
     );
   }
 
+  await supabase.rpc('marcar_clave_pastor_definida');
+
   return NextResponse.json({ ok: true });
 }

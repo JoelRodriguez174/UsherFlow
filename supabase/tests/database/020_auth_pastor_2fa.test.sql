@@ -50,8 +50,8 @@ values ((select uid from _u), 'pastor.moreno.f2@iglesia.org', 'authenticated', '
 
 select is(
   public.estado_email_pastor('pastor.moreno.f2@iglesia.org'),
-  '{"autorizado":true,"cuenta_activa":true}'::jsonb,
-  'con usuario confirmado y password: cuenta_activa true'
+  '{"autorizado":true,"cuenta_activa":false}'::jsonb,
+  'antes de definir clave explícitamente: cuenta_activa sigue false'
 );
 
 -- Helper para simular JWT de PostgREST en el test
