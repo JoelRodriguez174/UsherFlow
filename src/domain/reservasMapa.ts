@@ -84,3 +84,24 @@ export function filasParaGuardar(
       sector: s.nombre,
     }));
 }
+
+/**
+ * Copia la distribución de una sesión a otra respetando la disponibilidad real de cada sector en destino.
+ * Devuelve el borrador resultante y cuántos sectores debieron ajustarse (o quedar en 0) por falta de lugar.
+ */
+export function copiarDistribucionASesion(
+  origen: Record<number, number>,
+  disponiblesDestino: Record<number, number>,
+): { resultado: Record<number, number>; ajustados: number } {
+  const resultado: Record<number, number> = {};
+  let ajustados = 0;
+  for (const [idStr, cant] of Object.entries(origen)) {
+    if (cant <= 0) continue;
+    const id = Number(idStr);
+    const max = Math.max(0, disponiblesDestino[id] ?? 0);
+    const final = Math.min(cant, max);
+    if (final < cant) ajustados += 1;
+    if (final > 0) resultado[id] = final;
+  }
+  return { resultado, ajustados };
+}

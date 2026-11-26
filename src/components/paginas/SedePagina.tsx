@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 import { leerAcceso } from '@/lib/acceso';
 import { Boton } from '@/components/ui/Boton';
+import { MarcaICC } from '@/components/ui/MarcaICC';
 import { SedePanel } from '@/components/sede/SedePanel';
 
 type EventoPastor = {
@@ -72,7 +73,7 @@ export function SedePagina() {
     try {
       await fetch('/api/sede/auth/salir', { method: 'POST' });
     } finally {
-      router.replace('/sede/ingresar');
+      router.replace('/');
     }
   }
 
@@ -80,7 +81,7 @@ export function SedePagina() {
     <>
       <header className="safe-top border-b border-borde bg-superficie px-4 pb-3">
         <div className="mx-auto flex w-full max-w-md items-center justify-between gap-3 lg:max-w-7xl">
-          <p className="font-titulo text-lg text-texto">UsherFlow</p>
+          <MarcaICC subtitulo="Portal de Sedes" />
           {acceso.tipo === 'autenticado' && (
             <button
               type="button"
@@ -110,7 +111,7 @@ export function SedePagina() {
             Para ver el mapa y reservar lugares para tu sede necesitás iniciar sesión con tu email autorizado y el código de verificación.
           </p>
           <Link
-            href="/sede/ingresar"
+            href="/"
             className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-acento px-6 text-lg font-semibold text-fondo hover:brightness-110"
           >
             Ingresar a mi sede
@@ -147,7 +148,7 @@ export function SedePagina() {
               <SedePanel
                 key={eventoId ?? acceso.eventos[0].id}
                 eventoId={eventoId ?? acceso.eventos[0].id}
-                onSesionExpirada={() => router.replace('/sede/ingresar')}
+                onSesionExpirada={() => router.replace('/')}
               />
             </>
           )}

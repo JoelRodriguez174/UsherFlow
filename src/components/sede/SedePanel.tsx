@@ -1,9 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Copy, Trash2 } from 'lucide-react';
 import type { Seccion } from '@/domain/types';
 import {
+  copiarDistribucionASesion,
   estadoSectorReserva,
   filasParaGuardar,
   hayCambiosEnSesion,
@@ -92,6 +93,7 @@ export function SedePanel({
   const [vistaPrevia, setVistaPrevia] = useState<{ sectorId: number; cantidad: number } | null>(null);
   const [zona, setZona] = useState<FiltroZona>('todas');
   const [soloDisponibles, setSoloDisponibles] = useState(false);
+  const [copiandoAbierto, setCopiandoAbierto] = useState(false);
   const [detalleAbierto, setDetalleAbierto] = useState(false);
   const [cambioPendienteId, setCambioPendienteId] = useState<string | null>(null);
   const [mensaje, setMensaje] = useState<Mensaje | null>(null);
@@ -314,6 +316,31 @@ export function SedePanel({
     .filter((s) => (borrador[s.id] ?? 0) > 0)
     .map((s) => ({ ...s, cantidad: borrador[s.id] }));
 
+  const otrasSesiones = sesion ? mapa.sesiones.filter((s) => s.id !== sesion.id) : [];
+
+  function copiarASesion(destino: SesionServidor) {
+    const dispDestino: Record<number, number> = {};
+    for (const s of destino.sectores) {
+      const cap = s.capacidad ?? (s.agotado ? s.asignado : Math.max(s.asignado, 1));
+      dispDestino[s.sector_id] = s.disponibles ?? (s.agotado ? s.asignado : cap);
+    }
+    const { resultado, ajustados } = copiarDistribucionASesion(borrador, dispDestino);
+    setBorradores((prev) => ({ ...prev, [destino.id]: resultado }));
+    setSesionId(destino.id);
+    setSectorActivoId(null);
+    setVistaPrevia(null);
+    setCopiandoAbierto(false);
+    setDetalleAbierto(false);
+    setCambioPendienteId(null);
+    setMensaje({
+      tipo: 'info',
+      texto:
+        ajustados > 0
+          ? `Copiamos tu distribución a ${destino.nombre} (ajustamos ${ajustados} ${ajustados === 1 ? 'sector' : 'sectores'} al lugar disponible). Revisala y tocá Confirmar.`
+          : `Copiamos tu distribución a ${destino.nombre}. Revisala y tocá Confirmar para guardar.`,
+    });
+  }
+
   const contenidoCarrito = (
     <div className="flex flex-col gap-3">
       {itemsCarrito.length === 0 ? (
@@ -368,14 +395,62 @@ export function SedePanel({
       )}
 
       {mapa.abierto && sesion && (
-        <Boton
-          tamano="grande"
-          disabled={!hayCambios || guardando}
-          onClick={() => void confirmar()}
-          className="w-full"
-        >
-          {guardando ? 'Guardando…' : `Confirmar reservas de ${sesion.nombre}`}
-        </Boton>
+        <div className="flex flex-col gap-2">
+          <Boton
+            tamano="grande"
+            disabled={!hayCambios || guardando}
+            onClick={() => void confirmar()}
+            className="w-full"
+          >
+            {guardando ? 'Guardando…' : `Confirmar reservas de ${sesion.nombre}`}
+          </Boton>
+          {itemsCarrito.length > 0 && otrasSesiones.length === 1 && (
+            <Boton
+              variante="secundario"
+              disabled={guardando}
+              onClick={() => copiarASesion(otrasSesiones[0])}
+              className="w-full"
+            >
+              <Copy aria-hidden="true" className="size-4 shrink-0" />
+              {`Copiar a ${otrasSesiones[0].nombre}`}
+            </Boton>
+          )}
+          {itemsCarrito.length > 0 && otrasSesiones.length > 1 && (
+            <div className="flex flex-col gap-2">
+              <Boton
+                variante="secundario"
+                disabled={guardando}
+                aria-expanded={copiandoAbierto}
+                onClick={() => setCopiandoAbierto((v) => !v)}
+                className="w-full"
+              >
+                <Copy aria-hidden="true" className="size-4 shrink-0" />
+                Copiar a otra sesión…
+              </Boton>
+              <div
+                aria-hidden={!copiandoAbierto}
+                className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out ${
+                  copiandoAbierto ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                }`}
+              >
+                <div className="overflow-hidden">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {otrasSesiones.map((otra) => (
+                      <Boton
+                        key={otra.id}
+                        variante="fantasma"
+                        disabled={guardando}
+                        onClick={() => copiarASesion(otra)}
+                      >
+                        {otra.nombre}
+                      </Boton>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

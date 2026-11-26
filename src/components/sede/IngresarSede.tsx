@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { KeyRound, Mail, ShieldCheck } from 'lucide-react';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
+import { MarcaICC } from '@/components/ui/MarcaICC';
 import { CLASE_INPUT } from '@/components/supervisor/estilos';
 
 type Paso = 'email' | 'contrasena' | 'codigo' | 'definir_clave';
@@ -171,20 +172,49 @@ export function IngresarSede() {
     setInfo(null);
   }
 
+  const pasoNumero = paso === 'email' ? 1 : paso === 'contrasena' ? 2 : 3;
+
   return (
-    <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-5 px-4 py-8">
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold uppercase tracking-wider text-acento">UsherFlow · Pastores de sede</p>
-        <h1 className="font-titulo text-3xl text-texto">Ingresá a tu sede</h1>
-        <p className="text-base text-texto-suave">
-          Acceso exclusivo para emails autorizados por el supervisor, con verificación en dos pasos.
-        </p>
+    <main className="mx-auto flex min-h-dvh w-full max-w-lg flex-col justify-center gap-6 px-4 py-10">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <MarcaICC subtitulo="Iglesia Casa del Alfarero" tamano="grande" />
+        <div className="flex flex-col gap-1">
+          <h1 className="font-titulo text-3xl text-texto sm:text-4xl">Portal de reservas por sede</h1>
+          <p className="text-base text-texto-suave">
+            Ingresá con tu correo autorizado por el supervisor para reservar lugares en el mapa del salón.
+          </p>
+        </div>
       </div>
+
+      <ol aria-label="Pasos de ingreso" className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+        {[
+          { n: 1, texto: 'Correo' },
+          { n: 2, texto: 'Contraseña' },
+          { n: 3, texto: 'Código 2FA' },
+        ].map((item) => {
+          const activo = pasoNumero === item.n;
+          const listo = pasoNumero > item.n;
+          return (
+            <li
+              key={item.n}
+              className={`rounded-xl border px-2 py-2 transition-colors ${
+                activo
+                  ? 'border-acento bg-acento/15 text-acento'
+                  : listo
+                    ? 'border-libre/50 bg-libre/10 text-libre'
+                    : 'border-borde bg-superficie text-texto-suave'
+              }`}
+            >
+              {`${item.n}. ${item.texto}`}
+            </li>
+          );
+        })}
+      </ol>
 
       <Aviso mensaje={error} tipo="error" onCerrar={() => setError(null)} />
       <Aviso mensaje={info} tipo="info" onCerrar={() => setInfo(null)} />
 
-      <section className="rounded-3xl border border-borde bg-superficie p-5 shadow-lg">
+      <section className="rounded-3xl border border-borde bg-superficie p-6 shadow-xl sm:p-7">
         {paso === 'email' && (
           <form onSubmit={(e) => void enviarEmail(e)} className="flex flex-col gap-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-acento">

@@ -19,20 +19,21 @@ const fuenteCuerpo = Figtree({
 export const metadata: Metadata = {
   // /entrar?k=<clave> lleva el secreto compartido en la URL: nunca debe salir en el encabezado Referer.
   referrer: 'no-referrer',
-  title: 'UsherFlow — Iglesia Casa del Alfarero',
-  description: 'Sistema de ruteo y ocupación en tiempo real para el equipo de ujieres de ICC',
+  title: 'ICCReservas — Iglesia Casa del Alfarero',
+  description: 'Sistema de reservas por sede y organización del salón para conferencias de Iglesia Casa del Alfarero',
   manifest: '/manifest.json',
   icons: {
     icon: [
+      { url: '/logo-icc.png', type: 'image/png' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/icon-192.png',
+    apple: '/logo-icc.png',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'UsherFlow ICC',
+    title: 'ICCReservas',
   },
 };
 

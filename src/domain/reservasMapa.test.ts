@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   acotarCantidad,
+  copiarDistribucionASesion,
   estadoSectorReserva,
   filasParaGuardar,
   hayCambiosEnSesion,
@@ -51,5 +52,13 @@ describe('reservasMapa', () => {
     expect(filasParaGuardar(sectores, 'Domingo 10', { 1: 0, 2: 12 })).toEqual([
       { seccion: 'centro', sesion: 'Domingo 10', cantidad: 12, sector: 'Centro A' },
     ]);
+  });
+
+  it('copia la distribución a otra sesión acotando al disponible real y contando ajustes', () => {
+    const res = copiarDistribucionASesion({ 1: 10, 2: 8, 3: 5 }, { 1: 12, 2: 4, 3: 0 });
+    expect(res).toEqual({
+      resultado: { 1: 10, 2: 4 },
+      ajustados: 2,
+    });
   });
 });

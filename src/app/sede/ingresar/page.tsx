@@ -1,5 +1,5 @@
-import { IngresarSede } from '@/components/sede/IngresarSede';
+import { redirect } from 'next/navigation';
 
 export default function IngresarSedePage() {
-  return <IngresarSede />;
+  redirect('/');
 }

@@ -245,11 +245,11 @@ otp_expiry = 600
 # sender_name = "Admin"
 
 [auth.email.template.confirmation]
-subject = "Tu código de verificación — UsherFlow"
+subject = "Tu código de verificación — ICCReservas"
 content_path = "./supabase/templates/confirmation.html"
 
 [auth.email.template.magic_link]
-subject = "Tu código de verificación — UsherFlow"
+subject = "Tu código de verificación — ICCReservas"
 content_path = "./supabase/templates/magic_link.html"
 
 # Uncomment to customize notification email template

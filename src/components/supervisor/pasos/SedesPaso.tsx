@@ -370,7 +370,7 @@ export function SedesPaso() {
           Emails autorizados de las sedes
         </h2>
         <p className="text-sm text-texto-suave">
-          Cada pastor entra en <code className="text-texto">/sede/ingresar</code> con su email autorizado, su contraseña y un código de 6 dígitos al correo.
+          Cada pastor entra desde la página principal (<code className="text-texto">/</code>) con su email autorizado, su contraseña y un código de 6 dígitos al correo.
         </p>
 
         <form onSubmit={agregarSede} className="flex flex-col gap-2">

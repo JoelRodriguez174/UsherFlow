@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useSalon } from '@/state/SalonProvider';
 import { Aviso } from '@/components/ui/Aviso';
 import { IndicadorConexion } from '@/components/ui/IndicadorConexion';
+import { MarcaICC } from '@/components/ui/MarcaICC';
 import { PantallaClaveInvalida } from './PantallaClaveInvalida';
 
 type MarcoSalonProps = {
@@ -27,7 +28,7 @@ export function MarcoSalon({ controles, children }: MarcoSalonProps) {
       <header className="safe-top border-b border-borde bg-superficie px-4 pb-3">
         <div className="mx-auto flex w-full max-w-md flex-col gap-2 lg:max-w-6xl">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-titulo text-lg text-texto">UsherFlow</p>
+            <MarcaICC />
             {controles !== undefined && <div className="flex items-center gap-2">{controles}</div>}
           </div>
           <IndicadorConexion estado={conexion} onReintentar={() => window.location.reload()} />

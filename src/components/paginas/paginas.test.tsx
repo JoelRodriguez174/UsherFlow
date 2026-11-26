@@ -91,13 +91,13 @@ describe('estados comunes', () => {
 });
 
 describe('clave inválida según el rol', () => {
-  it('el pastor de sede sin sesión ve el acceso a /sede/ingresar en vez de "escaneá un QR"', async () => {
+  it('el pastor de sede sin sesión ve el acceso a / en vez de "escaneá un QR"', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ autenticado: false }), { status: 401 })));
     leerAcceso.mockReturnValue(null);
     render(<SedePagina />);
     expect(await screen.findByRole('heading', { name: 'Ingresá con tu cuenta de sede' })).toBeTruthy();
     expect(screen.queryByText(/escanealo|QR actual/i)).toBeNull();
-    expect(screen.getByRole('link', { name: 'Ingresar a mi sede' }).getAttribute('href')).toBe('/sede/ingresar');
+    expect(screen.getByRole('link', { name: 'Ingresar a mi sede' }).getAttribute('href')).toBe('/');
     vi.unstubAllGlobals();
   });
 

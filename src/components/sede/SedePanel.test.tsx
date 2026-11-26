@@ -240,4 +240,24 @@ describe('SedePanel', () => {
     await user.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
     expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('18 libres');
   });
+
+  it('permite copiar la distribución actual a otra sesión acotando al lugar disponible', async () => {
+    const user = userEvent.setup();
+    render(<SedePanel clave="SEDE1" />);
+
+    await user.click(await sector(/Centro A/));
+    const dialogo = screen.getByRole('dialog', { name: 'Centro A' });
+    const input = within(dialogo).getByLabelText('Cantidad de lugares') as HTMLInputElement;
+    await user.clear(input);
+    await user.type(input, '5');
+    await user.click(within(dialogo).getByRole('button', { name: 'Aplicar 5 lugares' }));
+
+    await user.click(screen.getByRole('button', { name: /Ver detalle/ }));
+    await user.click(screen.getByRole('button', { name: 'Copiar a Domingo 17' }));
+
+    expect(screen.getByRole('button', { name: /Domingo 17/ }).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getByText(/Copiamos tu distribución a Domingo 17/)).toBeTruthy();
+    // Centro A en Domingo 17 tiene solo 3 disponibles, así que 5 se acota a 3
+    expect(screen.getByRole('button', { name: /Centro A/ }).textContent).toContain('3 lugares');
+  });
 });
