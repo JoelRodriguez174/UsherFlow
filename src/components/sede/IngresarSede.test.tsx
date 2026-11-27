@@ -40,7 +40,7 @@ describe('IngresarSede', () => {
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it('primera activación: email -> código de 6 dígitos -> definir contraseña -> redirige a /sede', async () => {
+  it('primera activación: email -> código de 6 dígitos (auto-envío) -> definir contraseña -> redirige a /sede', async () => {
     const user = userEvent.setup();
     fetchMock
       .mockReturnValueOnce(respJson({ ok: true, paso: 'codigo_activacion' }))
@@ -52,8 +52,8 @@ describe('IngresarSede', () => {
     await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
     const inputCod = await screen.findByLabelText('Código de 6 dígitos');
+    expect((screen.getByRole('button', { name: /Reenviar código en \d+s/ }) as HTMLButtonElement).disabled).toBe(true);
     await user.type(inputCod, '482910');
-    await user.click(screen.getByRole('button', { name: 'Verificar código' }));
 
     const nueva = await screen.findByLabelText('Nueva contraseña');
     await user.type(nueva, 'mi-clave-segura');
@@ -63,7 +63,7 @@ describe('IngresarSede', () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/sede'));
   });
 
-  it('cuenta activa: email -> contraseña -> código 2FA -> redirige directo a /sede', async () => {
+  it('cuenta activa: email -> contraseña (con mostrar/ocultar) -> código 2FA -> redirige directo a /sede', async () => {
     const user = userEvent.setup();
     fetchMock
       .mockReturnValueOnce(respJson({ ok: true, paso: 'contrasena' }))
@@ -74,11 +74,17 @@ describe('IngresarSede', () => {
     await user.type(screen.getByLabelText('Email'), 'pastor@iglesia.org');
     await user.click(screen.getByRole('button', { name: 'Continuar' }));
 
-    await user.type(await screen.findByLabelText('Contraseña'), 'mi-clave-segura');
+    const inputPass = await screen.findByLabelText('Contraseña');
+    expect(inputPass.getAttribute('type')).toBe('password');
+    await user.click(screen.getByRole('button', { name: 'Mostrar contraseña' }));
+    expect(inputPass.getAttribute('type')).toBe('text');
+    await user.click(screen.getByRole('button', { name: 'Ocultar contraseña' }));
+    expect(inputPass.getAttribute('type')).toBe('password');
+
+    await user.type(inputPass, 'mi-clave-segura');
     await user.click(screen.getByRole('button', { name: 'Ingresar y enviar código' }));
 
     await user.type(await screen.findByLabelText('Código de 6 dígitos'), '123456');
-    await user.click(screen.getByRole('button', { name: 'Verificar código' }));
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith('/sede'));
   });

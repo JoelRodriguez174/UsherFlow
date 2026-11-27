@@ -57,8 +57,8 @@ describe('calcularPasos: evento vacío', () => {
     expect(pasos[0].completo).toBe(false);
     expect(pasos[0].bloqueado).toBe(false);
     expect(pasos[1].motivoBloqueo).toBe('Se abre al completar Salón');
-    expect(pasos[2].motivoBloqueo).toBe('Se abre al completar Sesiones');
-    expect(pasos[3].motivoBloqueo).toBe('Se abre al completar Sesiones');
+    expect(pasos[2].motivoBloqueo).toBe('Se abre al completar Eventos');
+    expect(pasos[3].motivoBloqueo).toBe('Se abre al completar Eventos');
     expect(pasos[5].motivoBloqueo).toBe('Se abre al completar Salón');
     expect(pasos.map((x) => x.bloqueadoPor)).toEqual([undefined, 'salon', 'sesiones', 'sesiones', undefined, 'salon']);
     expect([1, 2, 3, 5].every((i) => pasos[i].bloqueado)).toBe(true);
@@ -154,7 +154,7 @@ describe('calcularPasos: sesiones, sedes, reservas', () => {
     const p = calcularPasos(completo({ sesiones: [] }));
     const reservas = p.find((x) => x.id === 'reservas')!;
     expect(reservas.bloqueado).toBe(true);
-    expect(reservas.motivoBloqueo).toBe('Se abre al completar Sesiones');
+    expect(reservas.motivoBloqueo).toBe('Se abre al completar Eventos');
   });
 
   it('un paso ya completo no se vuelve a bloquear si un anterior se rompe (§7c)', () => {
@@ -174,7 +174,7 @@ describe('calcularPasos: sesiones, sedes, reservas', () => {
   it('revisión nombra el primer incompleto entre 1 y 4, no QR', () => {
     const rev = paso(completo({ sesiones: [] }), 'revision');
     expect(rev.bloqueado).toBe(true);
-    expect(rev.motivoBloqueo).toBe('Se abre al completar Sesiones');
+    expect(rev.motivoBloqueo).toBe('Se abre al completar Eventos');
     expect(rev.bloqueadoPor).toBe('sesiones');
   });
 });

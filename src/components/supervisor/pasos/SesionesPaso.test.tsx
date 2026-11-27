@@ -51,24 +51,38 @@ afterEach(cleanup);
 
 describe('SesionesPaso', () => {
   // Migrados de la antigua pantalla única
-  it('muestra la sesión en hora de Argentina y la liberación', async () => {
+  it('muestra el evento en hora de Argentina y la liberación', async () => {
     render(<SesionesPaso />);
-    expect(await screen.findByText(/Domingo 10 · .*10:00/)).toBeTruthy();
+    expect(await screen.findByText('Domingo 10')).toBeTruthy();
+    expect(screen.getByText(/10:00/)).toBeTruthy();
     expect((screen.getByLabelText('Minutos de liberación') as HTMLInputElement).value).toBe('20');
   });
 
-  it('guarda una sesión nueva con la hora de Argentina (-03:00)', async () => {
+  it('guarda un evento nuevo con inicio y fin en hora de Argentina (-03:00)', async () => {
     const user = userEvent.setup();
     render(<SesionesPaso />);
-    await user.type(await screen.findByLabelText('Nombre de la sesión'), 'Domingo 18');
+    await user.type(await screen.findByLabelText('Nombre del evento'), 'Domingo 18');
     await user.type(screen.getByLabelText('Inicio'), '2026-10-25T18:30');
-    await user.click(screen.getByRole('button', { name: 'Guardar sesión' }));
+    await user.type(screen.getByLabelText('Fin'), '2026-10-25T21:00');
+    await user.click(screen.getByRole('button', { name: 'Guardar evento' }));
     await waitFor(() => expect(llamadas('guardar_sesion')).toHaveLength(1));
     expect(llamadas('guardar_sesion')[0][1]).toEqual({
       p_clave: 'SUPER1',
       p_nombre: 'Domingo 18',
       p_inicio_at: '2026-10-25T18:30:00-03:00',
+      p_fin_at: '2026-10-25T21:00:00-03:00',
     });
+  });
+
+  it('rechaza un fin anterior o igual al inicio sin llamar al servidor', async () => {
+    const user = userEvent.setup();
+    render(<SesionesPaso />);
+    await user.type(await screen.findByLabelText('Nombre del evento'), 'Domingo 18');
+    await user.type(screen.getByLabelText('Inicio'), '2026-10-25T18:30');
+    await user.type(screen.getByLabelText('Fin'), '2026-10-25T18:00');
+    await user.click(screen.getByRole('button', { name: 'Guardar evento' }));
+    expect(await screen.findByText(/posterior al inicio/i)).toBeTruthy();
+    expect(llamadas('guardar_sesion')).toHaveLength(0);
   });
 
   it('borrar una sesión pide confirmación', async () => {
@@ -97,9 +111,9 @@ describe('SesionesPaso', () => {
   it('tras guardar o borrar una sesión se recarga el estado de preparación; si el servidor rechaza, no', async () => {
     const user = userEvent.setup();
     render(<SesionesPaso />);
-    await user.type(await screen.findByLabelText('Nombre de la sesión'), 'Domingo 18');
+    await user.type(await screen.findByLabelText('Nombre del evento'), 'Domingo 18');
     await user.type(screen.getByLabelText('Inicio'), '2026-10-25T18:30');
-    await user.click(screen.getByRole('button', { name: 'Guardar sesión' }));
+    await user.click(screen.getByRole('button', { name: 'Guardar evento' }));
     await waitFor(() => expect(recargar).toHaveBeenCalledTimes(1));
     await user.click(screen.getByRole('button', { name: 'Borrar Domingo 10' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Sí, borrar' }));

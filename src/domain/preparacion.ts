@@ -33,7 +33,7 @@ export type DatosPreparacion = {
 
 export const PASOS: ReadonlyArray<{ id: PasoId; titulo: string; ruta: string }> = [
   { id: 'salon', titulo: 'Salón', ruta: '/supervisor/salon' },
-  { id: 'sesiones', titulo: 'Sesiones', ruta: '/supervisor/sesiones' },
+  { id: 'sesiones', titulo: 'Eventos', ruta: '/supervisor/sesiones' },
   { id: 'sedes', titulo: 'Sedes', ruta: '/supervisor/sedes' },
   { id: 'reservas', titulo: 'Reservas', ruta: '/supervisor/reservas' },
   { id: 'qr', titulo: 'QR de ujieres', ruta: '/supervisor/qr' },
@@ -88,11 +88,11 @@ function calcularSalon(d: DatosPreparacion) {
 function calcularSesiones(d: DatosPreparacion) {
   const avisos = d.sesiones
     .filter((s) => Date.parse(s.inicio_at) < d.ahoraMs)
-    .map((s) => `La sesión ${s.nombre} ya empezó o es de una fecha pasada`);
+    .map((s) => `El evento ${s.nombre} ya empezó o es de una fecha pasada`);
   return {
-    requisitos: [{ texto: 'Al menos una sesión', ok: d.sesiones.length > 0, ejemplo: 'Jueves 19:00' }],
+    requisitos: [{ texto: 'Al menos un evento', ok: d.sesiones.length > 0, ejemplo: 'Jueves 19:00' }],
     avisos,
-    resumen: d.sesiones.length === 0 ? 'Sin sesiones' : plural(d.sesiones.length, 'sesión', 'sesiones'),
+    resumen: d.sesiones.length === 0 ? 'Sin eventos' : plural(d.sesiones.length, 'evento', 'eventos'),
   };
 }
 

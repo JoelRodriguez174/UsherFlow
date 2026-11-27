@@ -83,7 +83,7 @@ describe('PasosInicio', () => {
     const salon = detalle('Salón');
     expect(within(salon).getByText('Listo')).toBeTruthy();
     expect(within(salon).getByText('2 sectores · 80 lugares')).toBeTruthy();
-    expect(within(detalle('Sesiones')).getByText('Pendiente')).toBeTruthy();
+    expect(within(detalle('Eventos')).getByText('Pendiente')).toBeTruthy();
     expect(within(detalle('Sedes')).getByText('Bloqueado')).toBeTruthy();
     // completo pero con avisos: amarillo
     expect(within(detalle('QR de ujieres')).getByText('Con avisos')).toBeTruthy();
@@ -92,8 +92,8 @@ describe('PasosInicio', () => {
   it('al abrirlo lista requisitos con su estado, el ejemplo y los avisos', async () => {
     listo();
     render(<PasosInicio />);
-    await userEvent.click(titulo('Sesiones'));
-    const d = detalle('Sesiones');
+    await userEvent.click(titulo('Eventos'));
+    const d = detalle('Eventos');
     expect(d.open).toBe(true);
     const item = within(d).getByText('Al menos una sesión').closest('li')!;
     expect(within(item).getByText('Falta')).toBeTruthy();
@@ -105,7 +105,7 @@ describe('PasosInicio', () => {
   it('"Completar este paso" es un enlace a la ruta del paso', () => {
     listo();
     render(<PasosInicio />);
-    const enlace = within(detalle('Sesiones')).getByRole('link', { name: /completar este paso/i });
+    const enlace = within(detalle('Eventos')).getByRole('link', { name: /completar este paso/i });
     expect(enlace.getAttribute('href')).toBe('/supervisor/sesiones');
   });
 

@@ -107,7 +107,7 @@ export function MapaSupervisor({ clave, version = 0 }: { clave: string; version?
           {mapa.sesiones.length > 0 && (
             <div role="group" aria-labelledby="mapa-sup-sesion" className="flex flex-col gap-2">
               <p id="mapa-sup-sesion" className={CLASE_TITULO}>
-                Sesión
+                Evento
               </p>
               <div className="flex flex-wrap gap-2">
                 {mapa.sesiones.map((s) => (
@@ -149,7 +149,7 @@ export function MapaSupervisor({ clave, version = 0 }: { clave: string; version?
                     </span>
                   </div>
                   {reservasSector.length === 0 ? (
-                    <p className="text-sm text-texto-suave">Sin reservas en este sector para esta sesión.</p>
+                    <p className="text-sm text-texto-suave">Sin reservas en este sector para este evento.</p>
                   ) : (
                     <ul className="flex flex-wrap gap-2">
                       {reservasSector.map((r) => (

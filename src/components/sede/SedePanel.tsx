@@ -347,7 +347,7 @@ export function SedePanel({
         <p className="text-base text-texto-suave">
           {mapa.abierto
             ? 'Tocá un sector disponible en el mapa para elegir cuántos lugares reservar.'
-            : 'No tenés lugares reservados en esta sesión.'}
+            : 'No tenés lugares reservados en este evento.'}
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -425,7 +425,7 @@ export function SedePanel({
                 className="w-full"
               >
                 <Copy aria-hidden="true" className="size-4 shrink-0" />
-                Copiar a otra sesión…
+                Copiar a otro evento…
               </Boton>
               <div
                 aria-hidden={!copiandoAbierto}
@@ -457,17 +457,72 @@ export function SedePanel({
 
   return (
     <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6 pb-28 lg:grid lg:max-w-7xl lg:grid-cols-[minmax(0,1.45fr)_minmax(22rem,1fr)] lg:items-start lg:gap-x-8 lg:pb-8">
-      <header className="flex flex-col gap-1 lg:col-span-2">
-        <h1 className="font-titulo text-3xl text-texto">{mapa.sede.nombre}</h1>
-        {!mapa.abierto ? (
-          <p className="text-base font-semibold text-peligro">Cerrado</p>
-        ) : (
-          mapa.fecha_limite && (
-            <p className="text-base text-texto-suave">
-              Podés reservar o cambiar tus lugares hasta el {mostrarHora(mapa.fecha_limite)}
-            </p>
-          )
-        )}
+      <header className="flex flex-col gap-2 lg:col-span-2 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-titulo text-3xl text-texto">{mapa.sede.nombre}</h1>
+          {!mapa.abierto ? (
+            <p className="text-base font-semibold text-peligro">Cerrado</p>
+          ) : (
+            mapa.fecha_limite && (
+              <p className="text-base text-texto-suave">
+                Podés reservar o cambiar tus lugares hasta el {mostrarHora(mapa.fecha_limite)}
+              </p>
+            )
+          )}
+        </div>
+
+        {mapa.sesiones.length > 0 && (() => {
+          const totalesPorSesion = mapa.sesiones.map((s) => {
+            const conf = confirmadoDe(s);
+            const actual = borradores[s.id] ?? conf;
+            return {
+              id: s.id,
+              nombre: s.nombre,
+              total: resumenSesion(actual).totalLugares,
+              pendiente: hayCambiosEnSesion(conf, actual),
+            };
+          });
+          const totalGlobal = totalesPorSesion.reduce((acc, item) => acc + item.total, 0);
+          const sesionesConReserva = totalesPorSesion.filter((item) => item.total > 0).length;
+          return (
+            <div
+              aria-label="Resumen de todos los eventos"
+              className="flex flex-wrap items-center gap-2 rounded-2xl border border-borde bg-superficie px-3.5 py-2.5 text-sm"
+            >
+              <span className="font-semibold text-texto tabular-nums">
+                {`${totalGlobal} ${totalGlobal === 1 ? 'lugar' : 'lugares'} en total`}
+              </span>
+              <span aria-hidden="true" className="text-borde">
+                ·
+              </span>
+              <span className="text-texto-suave tabular-nums">
+                {`${sesionesConReserva}/${totalesPorSesion.length} ${totalesPorSesion.length === 1 ? 'evento' : 'eventos'} cargados`}
+              </span>
+              {totalesPorSesion.length > 1 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {totalesPorSesion.map((item) => (
+                    <span
+                      key={item.id}
+                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                        item.total > 0
+                          ? 'border-acento/40 bg-acento/10 text-acento'
+                          : 'border-borde bg-superficie-alta text-texto-suave'
+                      }`}
+                    >
+                      {`${item.nombre}: ${item.total}`}
+                      {item.pendiente && (
+                        <span
+                          aria-label="Cambios sin confirmar"
+                          className="inline-block size-1.5 rounded-full bg-advertencia"
+                        />
+                      )}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </header>
 
       <div className="flex flex-col gap-2 lg:col-span-2">

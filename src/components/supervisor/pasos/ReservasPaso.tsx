@@ -1,11 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useId, useState, type ChangeEvent } from 'react';
+import { Map } from 'lucide-react';
 import { SECCIONES, type Seccion } from '@/domain/types';
 import { parsearReservasCsv, planillaATexto, type FilaReserva } from '@/lib/csv';
 import { mensajeDeError, type ResultadoRpc } from '@/lib/rpc';
 import { Aviso } from '@/components/ui/Aviso';
 import { Boton } from '@/components/ui/Boton';
+import { Desplegable } from '@/components/ui/Desplegable';
 import { CLASE_INPUT, CLASE_TITULO } from '../estilos';
 import { MapaSupervisor } from '../MapaSupervisor';
 import { MarcoPaso } from '../MarcoPaso';
@@ -146,7 +148,12 @@ export function ReservasPaso() {
 
   return (
     <MarcoPaso paso="reservas">
-      <h1 className="font-titulo text-2xl text-texto">Reservas</h1>
+      <div className="flex flex-col gap-1">
+        <h1 className="font-titulo text-2xl text-texto">Reservas</h1>
+        <p className="text-sm text-texto-suave">
+          Acá se administran los asientos guardados para pastores, miembros de la iglesia, equipo de alabanza, embarazadas y delegaciones de cada sede.
+        </p>
+      </div>
       <Aviso mensaje={mensaje?.texto ?? null} tipo={mensaje?.tipo} onCerrar={() => setMensaje(null)} />
       {sesiones === null && mensaje === null && (
         <p role="status" className="text-base text-texto-suave">
@@ -156,7 +163,7 @@ export function ReservasPaso() {
 
       <section aria-labelledby="res-reservas" className="flex flex-col gap-4">
         <h2 id="res-reservas" className={CLASE_TITULO}>
-          Reservas por sesión
+          Reservas por evento
         </h2>
         {sesiones?.map((s) => (
           // key con las reservas del servidor: tras guardar o importar, la tabla se reinicia con lo guardado.
@@ -206,7 +213,13 @@ export function ReservasPaso() {
         )}
       </section>
 
-      <MapaSupervisor clave={clave} version={version} />
+      <Desplegable
+        titulo="Mapa del salón"
+        subtitulo="Desplegá para ver la distribución visual de reservas por sector"
+        icono={<Map className="size-5" />}
+      >
+        <MapaSupervisor clave={clave} version={version} />
+      </Desplegable>
     </MarcoPaso>
   );
 }

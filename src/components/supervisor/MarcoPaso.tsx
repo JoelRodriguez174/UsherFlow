@@ -13,7 +13,15 @@ import { usePreparacion } from './usePreparacion';
  * listo para mostrarse y no bloqueado) y "Siguiente". Es el `<main>` de la página; el título lo pone el contenido.
  * QR es la excepción: sus enlaces y "Renovar claves" no dependen del estado de preparación, así que se ven siempre.
  */
-export function MarcoPaso({ paso: id, children }: { paso: PasoId; children: ReactNode }) {
+export function MarcoPaso({
+  paso: id,
+  ancho = 'normal',
+  children,
+}: {
+  paso: PasoId;
+  ancho?: 'normal' | 'amplio';
+  children: ReactNode;
+}) {
   const { estado, pasos, recargar } = usePreparacion();
   const i = pasos.findIndex((p) => p.id === id);
   const paso = pasos[i];
@@ -60,9 +68,13 @@ export function MarcoPaso({ paso: id, children }: { paso: PasoId; children: Reac
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-6 lg:grid lg:max-w-6xl lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-x-10 lg:pt-6">
+    <main
+      className={`mx-auto flex w-full max-w-md flex-col gap-4 px-4 pb-6 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-x-10 lg:pt-6 ${
+        ancho === 'amplio' ? 'lg:max-w-7xl' : 'lg:max-w-6xl'
+      }`}
+    >
       <BarraPasos actual={id} />
-      <div className="flex min-w-0 flex-col gap-4 lg:max-w-3xl">
+      <div className={`flex min-w-0 flex-col gap-4 ${ancho === 'amplio' ? 'lg:max-w-none' : 'lg:max-w-3xl'}`}>
         <Link
           href="/supervisor"
           className="inline-flex min-h-11 w-fit items-center gap-1.5 text-sm font-semibold text-texto-suave transition-colors hover:text-acento"

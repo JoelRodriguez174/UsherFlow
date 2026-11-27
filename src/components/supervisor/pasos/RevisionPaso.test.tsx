@@ -41,8 +41,8 @@ describe('RevisionPaso', () => {
     expect(within(fila('Salón')).getByText(': Incompleto')).toBeTruthy();
     expect(within(fila('Salón')).getByText('Filas cargadas')).toBeTruthy();
     expect(within(fila('Salón')).queryByText('Sin pisarse')).toBeNull();
-    expect(within(fila('Sesiones')).getByText(': Con avisos')).toBeTruthy();
-    expect(within(fila('Sesiones')).getByText('Una sesión pronto')).toBeTruthy();
+    expect(within(fila('Eventos')).getByText(': Con avisos')).toBeTruthy();
+    expect(within(fila('Eventos')).getByText('Una sesión pronto')).toBeTruthy();
     expect(within(fila('Sedes')).getByText(': Listo')).toBeTruthy();
     expect(screen.queryByText('Todo listo')).toBeNull();
   });

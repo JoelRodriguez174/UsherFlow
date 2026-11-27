@@ -158,11 +158,18 @@ export function MapaSalon({
                     const pctOcupado = mostrarBarra
                       ? Math.min(100, Math.max(0, Math.round(((s.capacidad! - s.libres!) / s.capacidad!) * 100)))
                       : 0;
+                    const pctLibre = mostrarBarra ? 100 - pctOcupado : 0;
+                    const textoTooltip = mostrarBarra
+                      ? `${s.libres} de ${s.capacidad} libres (${pctLibre}%)`
+                      : s.estado === "agotado"
+                        ? "Sin lugares libres"
+                        : null;
 
                     return (
                       <button
                         key={s.id}
                         type="button"
+                        title={textoTooltip ?? undefined}
                         aria-pressed={
                           onAlternar && alternable
                             ? permitirAsignado
@@ -174,7 +181,7 @@ export function MapaSalon({
                         onClick={() => {
                           if (!inactivo) onAlternar?.(s.id);
                         }}
-                        className={`flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-2 py-2.5 text-center break-words transition-[filter,transform,border-color,opacity] ${
+                        className={`group relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 px-2 py-2.5 text-center break-words transition-[filter,transform,border-color,opacity] ${
                           vistaAmpliada ? "min-h-24 lg:min-h-28 px-4" : alturaPorFilas(s.filaDesde, s.filaHasta)
                         } ${clases} ${
                           inactivo ? "cursor-default" : "cursor-pointer hover:brightness-110 active:scale-[0.99]"
@@ -182,6 +189,14 @@ export function MapaSalon({
                           s.sinConfirmar ? "border-dashed" : ""
                         } ${deshabilitado ? "opacity-60" : atenuado ? "opacity-35" : ""}`}
                       >
+                        {textoTooltip && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute -top-2 left-1/2 z-20 hidden -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-borde bg-fondo px-2.5 py-1 text-xs font-semibold text-texto opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100 lg:block"
+                          >
+                            {textoTooltip}
+                          </span>
+                        )}
                         <span className={`${vistaAmpliada ? "text-base" : "text-sm"} font-bold leading-tight`}>{s.nombre}</span>
                         <span className="text-xs opacity-90">{`filas ${s.filaDesde}–${s.filaHasta}`}</span>
                         {s.detalle && <span className="text-xs font-medium tabular-nums">{s.detalle}</span>}

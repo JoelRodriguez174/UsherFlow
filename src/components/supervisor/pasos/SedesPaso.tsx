@@ -240,7 +240,7 @@ export function SedesPaso() {
   });
 
   return (
-    <MarcoPaso paso="sedes">
+    <MarcoPaso paso="sedes" ancho="amplio">
       <h1 className="font-titulo text-2xl text-texto">Sedes</h1>
       <Aviso mensaje={mensaje?.texto ?? null} tipo={mensaje?.tipo} onCerrar={() => setMensaje(null)} />
       {!cargado && mensaje === null && (
@@ -272,34 +272,37 @@ export function SedesPaso() {
         </div>
       )}
 
-      <section aria-labelledby={`${idBase}-fecha`} className="flex flex-col gap-3">
-        <h2 id={`${idBase}-fecha`} className={CLASE_TITULO}>
-          Plazo de las sedes
-        </h2>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            void guardarFecha(fecha);
-          }}
-          className="flex flex-col gap-3"
-        >
-          <div className="flex flex-col gap-1">
-            <label htmlFor={idFecha} className="text-base text-texto">
-              Fecha límite
-            </label>
-            <input id={idFecha} type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} required className={CLASE_INPUT} />
-            <p className="text-sm text-texto-suave">Hora de Argentina. Pasada esta fecha, las sedes ya no pueden cambiar sus reservas.</p>
-          </div>
-          <Boton type="submit" variante="secundario" disabled={ocupado}>
-            Guardar
-          </Boton>
-          <Boton variante="fantasma" disabled={ocupado} onClick={() => void guardarFecha(null)}>
-            Sin fecha límite
-          </Boton>
-        </form>
-      </section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        <section aria-labelledby={`${idBase}-fecha`} className="flex flex-col gap-3 rounded-2xl border border-borde bg-superficie p-4">
+          <h2 id={`${idBase}-fecha`} className={CLASE_TITULO}>
+            Plazo de las sedes
+          </h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void guardarFecha(fecha);
+            }}
+            className="flex flex-col gap-3"
+          >
+            <div className="flex flex-col gap-1">
+              <label htmlFor={idFecha} className="text-base text-texto">
+                Fecha límite
+              </label>
+              <input id={idFecha} type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)} required className={CLASE_INPUT} />
+              <p className="text-sm text-texto-suave">Hora de Argentina. Pasada esta fecha, las sedes ya no pueden cambiar sus reservas.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Boton type="submit" variante="secundario" disabled={ocupado}>
+                Guardar
+              </Boton>
+              <Boton variante="fantasma" disabled={ocupado} onClick={() => void guardarFecha(null)}>
+                Sin fecha límite
+              </Boton>
+            </div>
+          </form>
+        </section>
 
-      <section aria-labelledby={`${idBase}-importar`} className="flex flex-col gap-3 rounded-2xl border border-borde bg-superficie p-4">
+        <section aria-labelledby={`${idBase}-importar`} className="flex flex-col gap-3 rounded-2xl border border-borde bg-superficie p-4">
         <h2 id={`${idBase}-importar`} className={CLASE_TITULO}>
           Importar emails desde Excel o CSV
         </h2>
@@ -363,7 +366,8 @@ export function SedesPaso() {
             )}
           </div>
         )}
-      </section>
+        </section>
+      </div>
 
       <section aria-labelledby={`${idBase}-sedes`} className="flex flex-col gap-3">
         <h2 id={`${idBase}-sedes`} className={CLASE_TITULO}>
@@ -373,15 +377,17 @@ export function SedesPaso() {
           Cada pastor entra desde la página principal (<code className="text-texto">/</code>) con su email autorizado, su contraseña y un código de 6 dígitos al correo.
         </p>
 
-        <form onSubmit={agregarSede} className="flex flex-col gap-2">
-          <label htmlFor={`${idBase}-sede`} className="text-base text-texto">
-            Agregar sede
-          </label>
-          <input id={`${idBase}-sede`} type="text" value={nuevaSede} onChange={(e) => setNuevaSede(e.target.value)} autoComplete="off" aria-describedby={`${idBase}-ayuda`} className={CLASE_INPUT} />
-          <p id={`${idBase}-ayuda`} className="text-sm text-texto-suave">
-            Los nombres no distinguen mayúsculas ni acentos.
-          </p>
-          <Boton type="submit" variante="secundario" disabled={ocupado}>
+        <form onSubmit={agregarSede} className="flex flex-col gap-2 rounded-2xl border border-borde bg-superficie p-4 sm:flex-row sm:items-end">
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <label htmlFor={`${idBase}-sede`} className="text-base text-texto">
+              Agregar sede
+            </label>
+            <input id={`${idBase}-sede`} type="text" value={nuevaSede} onChange={(e) => setNuevaSede(e.target.value)} autoComplete="off" placeholder="Ej. Pilar" aria-describedby={`${idBase}-ayuda`} className={CLASE_INPUT} />
+            <p id={`${idBase}-ayuda`} className="text-xs text-texto-suave">
+              Los nombres no distinguen mayúsculas ni acentos.
+            </p>
+          </div>
+          <Boton type="submit" variante="secundario" disabled={ocupado} className="sm:mb-5">
             Agregar
           </Boton>
         </form>
@@ -429,57 +435,62 @@ export function SedesPaso() {
           <p className="text-sm text-texto-suave">Ninguna sede coincide con ese filtro.</p>
         )}
 
-        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          {sedesFiltradas.map((s) => {
-            const badge = badgeEstadoSede(s);
-            const valor = emailsEditados[s.sede_id] ?? '';
-            const sinCambios = valor.trim().toLowerCase() === (s.email_autorizado ?? '');
-            return (
-              <li key={s.sede_id} className="flex flex-col gap-3 rounded-2xl border border-borde bg-superficie p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-titulo text-xl text-texto">{s.nombre}</p>
-                  <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badge.clases}`}>
-                    {badge.texto}
-                  </span>
-                </div>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void guardarEmail(s, valor);
-                  }}
-                  className="flex flex-col gap-2"
+        {sedesFiltradas.length > 0 && (
+          <ul className="divide-y divide-borde overflow-hidden rounded-2xl border border-borde bg-superficie">
+            {sedesFiltradas.map((s) => {
+              const badge = badgeEstadoSede(s);
+              const valor = emailsEditados[s.sede_id] ?? '';
+              const sinCambios = valor.trim().toLowerCase() === (s.email_autorizado ?? '');
+              return (
+                <li
+                  key={s.sede_id}
+                  className="flex flex-col gap-3 px-4 py-3.5 transition-colors hover:bg-superficie-alta/40 md:flex-row md:items-center md:gap-4"
                 >
-                  <label htmlFor={`${idBase}-email-${s.sede_id}`} className="text-sm text-texto-suave">
-                    {`Email autorizado de ${s.nombre}`}
-                  </label>
-                  <input
-                    id={`${idBase}-email-${s.sede_id}`}
-                    type="email"
-                    autoComplete="off"
-                    placeholder="pastor@ejemplo.com"
-                    value={valor}
-                    onChange={(e) => setEmailsEditados((prev) => ({ ...prev, [s.sede_id]: e.target.value }))}
-                    className={CLASE_INPUT}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Boton type="submit" disabled={ocupado || sinCambios || valor.trim() === ''}>
-                      Guardar email
-                    </Boton>
-                    {s.email_autorizado && (
-                      <Boton
-                        variante="fantasma"
-                        disabled={ocupado}
-                        onClick={() => void guardarEmail(s, '')}
-                      >
-                        Quitar acceso
-                      </Boton>
-                    )}
+                  <div className="flex items-center justify-between gap-2 md:w-48 md:shrink-0 md:flex-col md:items-start md:gap-1">
+                    <p className="font-semibold text-texto">{s.nombre}</p>
+                    <span className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${badge.clases}`}>
+                      {badge.texto}
+                    </span>
                   </div>
-                </form>
-              </li>
-            );
-          })}
-        </ul>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void guardarEmail(s, valor);
+                    }}
+                    className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center"
+                  >
+                    <label htmlFor={`${idBase}-email-${s.sede_id}`} className="sr-only">
+                      {`Email autorizado de ${s.nombre}`}
+                    </label>
+                    <input
+                      id={`${idBase}-email-${s.sede_id}`}
+                      type="email"
+                      autoComplete="off"
+                      placeholder="pastor@ejemplo.com"
+                      value={valor}
+                      onChange={(e) => setEmailsEditados((prev) => ({ ...prev, [s.sede_id]: e.target.value }))}
+                      className={`${CLASE_INPUT} min-w-0 flex-1`}
+                    />
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <Boton type="submit" disabled={ocupado || sinCambios || valor.trim() === ''}>
+                        Guardar email
+                      </Boton>
+                      {s.email_autorizado && (
+                        <Boton
+                          variante="fantasma"
+                          disabled={ocupado}
+                          onClick={() => void guardarEmail(s, '')}
+                        >
+                          Quitar acceso
+                        </Boton>
+                      )}
+                    </div>
+                  </form>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
     </MarcoPaso>
   );

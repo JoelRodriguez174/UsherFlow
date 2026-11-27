@@ -48,13 +48,13 @@ describe('MarcoPaso', () => {
   it('nombra el paso que dice bloqueadoPor (Revisión apunta al primero que falta, no a QR)', () => {
     listo({ revision: { bloqueado: true, bloqueadoPor: 'sesiones' } });
     render(<MarcoPaso paso="revision"><p>x</p></MarcoPaso>);
-    expect(screen.getByRole('link', { name: 'Ir a Sesiones' }).getAttribute('href')).toBe('/supervisor/sesiones');
+    expect(screen.getByRole('link', { name: 'Ir a Eventos' }).getAttribute('href')).toBe('/supervisor/sesiones');
   });
 
   it('"Siguiente" queda deshabilitado con el motivo mientras el paso no está completo', () => {
     listo({ salon: { requisitos: [{ texto: 'Filas cargadas', ok: false }, { texto: 'Sectores', ok: true }] } });
     render(<MarcoPaso paso="salon"><p>x</p></MarcoPaso>);
-    const boton = screen.getByRole('button', { name: 'Siguiente: Sesiones' }) as HTMLButtonElement;
+    const boton = screen.getByRole('button', { name: 'Siguiente: Eventos' }) as HTMLButtonElement;
     expect(boton.disabled).toBe(true);
     expect(screen.getByText('Falta: Filas cargadas')).toBeTruthy();
     expect(boton.getAttribute('aria-describedby')).toBe(screen.getByText('Falta: Filas cargadas').id);
@@ -64,7 +64,7 @@ describe('MarcoPaso', () => {
   it('con el paso completo (aunque tenga avisos) "Siguiente" es un enlace al paso que sigue', () => {
     listo({ salon: { completo: true, avisos: ['ojo'] } });
     render(<MarcoPaso paso="salon"><p>x</p></MarcoPaso>);
-    expect(screen.getByRole('link', { name: 'Siguiente: Sesiones' }).getAttribute('href')).toBe('/supervisor/sesiones');
+    expect(screen.getByRole('link', { name: 'Siguiente: Eventos' }).getAttribute('href')).toBe('/supervisor/sesiones');
   });
 
   it('el último paso no tiene "Siguiente"', () => {
